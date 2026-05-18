@@ -9,7 +9,6 @@ venv/
 venv
 .venv
 .venv/
-*.toml
 *.python-version
 uv.lock
 
