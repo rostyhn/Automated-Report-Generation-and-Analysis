@@ -225,8 +225,7 @@ class _InstructorConsolidatedDoc:
         avg1 = avg2 = overall = None
         resp_rate_str = "N/A"
         resp_count = 0
-        # so AI summary gets loaded from the JSON if present... what is this JSON?
-        ai_summary = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ultrices non urna et auctor. Nunc est sem, accumsan eget venenatis in, molestie quis turpis. Fusce eu justo et nisi vulputate vehicula. Donec viverra velit eros. In blandit, neque ut consectetur condimentum, lorem nibh lobortis justo, id tristique ipsum metus vel lorem. Aenean auctor elementum odio sed semper. Praesent ac augue sit amet odio condimentum condimentum. Donec egestas dui eleifend, aliquet nunc vel, rutrum nunc. Mauris vulputate dui quis metus luctus, nec semper nulla aliquet. Etiam imperdiet felis non lectus tempus hendrerit. Sed tincidunt turpis vel lacus gravida, eget sagittis est tempor. Nam metus dui, tempus id iaculis et, malesuada sed quam. Sed sed mauris sed magna vulputate semper. In sit amet leo tempus, feugiat leo et, tincidunt turpis."
+        ai_summary = "No evaluation data available for this course session."
 
         if has_eval:
             info = pdf_json.get("eval_info", {})
@@ -842,4 +841,3 @@ class _InstructorConsolidatedDoc:
                 d.append(NoEscape(rf"\courserow{{{prefix}}}%"))
 
         d.append(NoEscape(instructor_consolidated_tex.get_per_course_table_footer()))
-

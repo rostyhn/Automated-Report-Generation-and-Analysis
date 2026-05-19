@@ -168,6 +168,7 @@ def run_pdf_parser(pdf_source, parsed_base_dir, overwrite_json=False):
                     if file == ".gitkeep":
                         continue
 
+                    # need smarter way of dealing with the file format... could this be read from the pdf itself?
                     if file.endswith(".pdf"):
                         extracted = extract_filename(file)
                         if not extracted:

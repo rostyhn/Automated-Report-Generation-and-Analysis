@@ -81,11 +81,12 @@ def enrich_csv_with_evals(csv_path: str, json_dir: str, config: dict) -> None:
 
     df.to_csv(csv_path, index=False)
 
-    # why not save this?
     eval_count = sum(1 for v in has_eval if v)
     print(
         f"  ✅ Enriched CSV with evaluation data. {eval_count} of {len(df)} rows have evaluations."
     )
+
+    return df
 
 
 def _append_empty(

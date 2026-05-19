@@ -4,7 +4,7 @@ import subprocess
 import sys
 from typing import Any, Mapping, Optional
 
-from pylatex import(
+from pylatex import (
     Command,
     Document,
     NoEscape,
@@ -12,24 +12,33 @@ from pylatex import(
 from src.scorecard_doc import _ScorecardDoc
 from src.consolidated_doc import _ConsolidatedDoc
 from src.instructor_consolidated_doc import _InstructorConsolidatedDoc
-from src.utils import course_to_json_path, course_to_stem, course_to_output_filename, instructor_to_stem
+from src.utils import (
+    course_to_json_path,
+    course_to_stem,
+    course_to_output_filename,
+    instructor_to_stem,
+)
 from src.data_handler import aggregate_for_row, get_courses_by_instructor
+
 
 def load_pdf_json(pdf_json_path):
     # Attempt to load the file
     try:
-        with open(pdf_json_path, 'r', encoding='utf-8') as f:
+        with open(pdf_json_path, "r", encoding="utf-8") as f:
             pdf_json = json.load(f)
             return pdf_json
     except FileNotFoundError:
         print(f"Error: json file not found at: {pdf_json_path}.", file=sys.stderr)
         return None
     except json.JSONDecodeError as e:
-        print(f"Error: Failed to decode json from {pdf_json_path}. Details: {e}", file=sys.stderr)
+        print(
+            f"Error: Failed to decode json from {pdf_json_path}. Details: {e}",
+            file=sys.stderr,
+        )
         return None
 
 
-def _compile_pdf(doc, output_path, compiler='pdflatex', clean_tex=True, passes=2):
+def _compile_pdf(doc, output_path, compiler="pdflatex", clean_tex=True, passes=2):
     """
     Generate .tex and compile to PDF with multiple passes.
 
@@ -46,14 +55,14 @@ def _compile_pdf(doc, output_path, compiler='pdflatex', clean_tex=True, passes=2
         passes: number of pdflatex passes (2 resolves most cross-refs)
     """
     # Strip .pdf extension if caller accidentally included it
-    if output_path.endswith('.pdf'):
+    if output_path.endswith(".pdf"):
         output_path = output_path[:-4]
 
     # Generate .tex file
     doc.generate_tex(output_path)
 
-    tex_file = output_path + '.tex'
-    pdf_file = output_path + '.pdf'
+    tex_file = output_path + ".tex"
+    pdf_file = output_path + ".pdf"
     work_dir = os.path.dirname(os.path.abspath(tex_file))
     tex_basename = os.path.basename(tex_file)
 
@@ -61,7 +70,7 @@ def _compile_pdf(doc, output_path, compiler='pdflatex', clean_tex=True, passes=2
     last_result = None
     for pass_num in range(1, passes + 1):
         last_result = subprocess.run(
-            [compiler, '--interaction=nonstopmode', tex_basename],
+            [compiler, "--interaction=nonstopmode", tex_basename],
             cwd=work_dir,
             capture_output=True,
             timeout=120,
@@ -70,14 +79,17 @@ def _compile_pdf(doc, output_path, compiler='pdflatex', clean_tex=True, passes=2
     # Verify PDF was produced (don't rely on exit code — pdflatex returns
     # non-zero for non-fatal warnings like rowcolor/noalign conflicts)
     if not os.path.exists(pdf_file):
-        stderr = last_result.stderr.decode('utf-8', errors='replace') if last_result else 'unknown'
+        stderr = (
+            last_result.stderr.decode("utf-8", errors="replace")
+            if last_result
+            else "unknown"
+        )
         raise RuntimeError(
-            f"pdflatex failed to produce {pdf_file}\n"
-            f"Compiler stderr:\n{stderr}"
+            f"pdflatex failed to produce {pdf_file}\nCompiler stderr:\n{stderr}"
         )
 
     # Clean auxiliary files
-    for ext in ['.aux', '.log', '.out', '.fls', '.fdb_latexmk']:
+    for ext in [".aux", ".log", ".out", ".fls", ".fdb_latexmk"]:
         aux_file = output_path + ext
         if os.path.exists(aux_file):
             try:
@@ -100,6 +112,7 @@ def _instructor_folder_name(row: Mapping[str, Any]) -> str:
     Falls back to 'Last, First' if no middle name/initial is present.
     Spaces replaced with underscores; commas preserved.
     """
+
     def _safe_str(val) -> str:
         if val is None or (isinstance(val, float) and val != val):  # NaN check
             return ""
@@ -120,13 +133,13 @@ def _instructor_folder_name(row: Mapping[str, Any]) -> str:
 
 
 def assemble_scorecard(
-        course: Mapping[str, Any],
-        config,
-        csv_path,
-        short:bool = False,
-        newcommand:bool = True,
-        consolidated:bool = True,
-    ):
+    course: Mapping[str, Any],
+    config,
+    csv_path,
+    short: bool = False,
+    newcommand: bool = True,
+    consolidated: bool = True,
+):
     """
     Generates the .tex for the scorecard & saves it as a pdf.
 
@@ -137,30 +150,32 @@ def assemble_scorecard(
     Todo:
         Implement the aggregate data metrics
     """
-    paths = config['paths']
+    paths = config["paths"]
 
     agg_data = aggregate_for_row(
-        comparison=config['comparison'],
+        comparison=config["comparison"],
         row=course,
-        json_dir=paths['parsed_pdf_dir'],
-        csv_path=csv_path
+        json_dir=paths["parsed_pdf_dir"],
+        csv_path=csv_path,
     )
 
-    histogram_dir=paths['grade_histogram_dir']
-    tex_output_path=paths['tex_dir']
+    histogram_dir = paths["grade_histogram_dir"]
+    tex_output_path = paths["tex_dir"]
     scorecard_output_path = os.path.join(
-        paths['scorecard_dir'], _instructor_folder_name(course)
+        paths["scorecard_dir"], _instructor_folder_name(course)
     )
     os.makedirs(scorecard_output_path, exist_ok=True)
 
     # Source the grade histogram from the json path (similar naming structure)
     histrogram_name = course_to_stem(course)
-    histogram_full_path = os.path.abspath(os.path.join(histogram_dir, f"{histrogram_name}.png"))
+    histogram_full_path = os.path.abspath(
+        os.path.join(histogram_dir, f"{histrogram_name}.png")
+    )
 
     # Convert backslashes to forward slashes for LaTeX compatibility on Windows
     # LaTeX treats backslashes as escape characters, so we need to use forward slashes
     if isinstance(histogram_full_path, str):
-        histogram_full_path = histogram_full_path.replace('\\', '/')
+        histogram_full_path = histogram_full_path.replace("\\", "/")
 
     # Load the pdf json representation
     pdf_json = load_pdf_json(course_to_json_path(course))
@@ -170,9 +185,11 @@ def assemble_scorecard(
 
     # Generate the latex doc
     if consolidated:
-        boxplot_path = os.path.abspath(os.path.join(paths.get('resources_dir', 'resources'), 'boxplot.png'))
+        boxplot_path = os.path.abspath(
+            os.path.join(paths.get("resources_dir", "resources"), "boxplot.png")
+        )
         if isinstance(boxplot_path, str):
-            boxplot_path = boxplot_path.replace('\\', '/')
+            boxplot_path = boxplot_path.replace("\\", "/")
         latex_doc = _ConsolidatedDoc(
             csv_row=course,
             pdf_json=pdf_json,
@@ -203,9 +220,14 @@ def assemble_scorecard(
     print(f"  ✅ Saved LaTeX to {full_output_path}")
 
     # Compile to PDF — pass path WITHOUT .pdf extension (_compile_pdf appends it)
-    full_scorecard_output_path = os.path.join(scorecard_output_path, latex_doc.output_filename)
-    _compile_pdf(latex_doc.doc, full_scorecard_output_path, compiler='pdflatex', clean_tex=True)
+    full_scorecard_output_path = os.path.join(
+        scorecard_output_path, latex_doc.output_filename
+    )
+    _compile_pdf(
+        latex_doc.doc, full_scorecard_output_path, compiler="pdflatex", clean_tex=True
+    )
     print(f"📝✅ Saved PDF Scorecard to {full_scorecard_output_path}.pdf")
+
 
 def assemble_instructor_scorecard(
     instructor: Mapping[str, Any],
@@ -219,10 +241,10 @@ def assemble_instructor_scorecard(
     aggregate KPIs, grade distribution, AI summary placeholder, and a
     per-course comparison table with deltas against config-driven baselines.
     """
-    paths = config['paths']
-    tex_output_path = paths['tex_dir']
+    paths = config["paths"]
+    tex_output_path = paths["tex_dir"]
     scorecard_output_path = os.path.join(
-        paths['scorecard_dir'], _instructor_folder_name(instructor)
+        paths["scorecard_dir"], _instructor_folder_name(instructor)
     )
     os.makedirs(scorecard_output_path, exist_ok=True)
 
@@ -232,8 +254,10 @@ def assemble_instructor_scorecard(
     histogram_dir = os.path.join(temp_dir, "instructor_histograms")
     overlay_dir = os.path.join(temp_dir, "instructor_overlays")
 
-    # Get all courses for this instructor (require JSON for eval data)
-    instructor_courses = get_courses_by_instructor(instructor, csv_path, require_json=True)
+    # Get all courses for this instructor (require JSON for eval data)...
+    instructor_courses = get_courses_by_instructor(
+        instructor, csv_path, require_json=False
+    )
 
     if instructor_courses.empty:
         print("No courses with evaluations found for instructor; nothing to generate.")
@@ -241,10 +265,10 @@ def assemble_instructor_scorecard(
 
     # Boxplot placeholder path
     boxplot_path = os.path.abspath(
-        os.path.join(paths.get('resources_dir', 'resources'), 'boxplot.png')
+        os.path.join(paths.get("resources_dir", "resources"), "boxplot.png")
     )
     if isinstance(boxplot_path, str):
-        boxplot_path = boxplot_path.replace('\\', '/')
+        boxplot_path = boxplot_path.replace("\\", "/")
 
     # Build the consolidated instructor doc
     doc_builder = _InstructorConsolidatedDoc(
@@ -277,5 +301,6 @@ def assemble_instructor_scorecard(
 
     # Compile to PDF — pass path WITHOUT .pdf extension (_compile_pdf appends it)
     full_scorecard_output_path = os.path.join(scorecard_output_path, output_filename)
-    _compile_pdf(doc, full_scorecard_output_path, compiler='pdflatex', clean_tex=True)
+    _compile_pdf(doc, full_scorecard_output_path, compiler="pdflatex", clean_tex=True)
     print(f"📝✅ Saved instructor Scorecard to {full_scorecard_output_path}.pdf")
+

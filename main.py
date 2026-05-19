@@ -89,15 +89,15 @@ class Application:
 
     def enrich_csv(self):
         print("📎 Enriching CSV with evaluation data")
-        csv_enricher.enrich_csv_with_evals(
+        self.enriched_csv = csv_enricher.enrich_csv_with_evals(
             csv_path=self.csv_path[0],
             json_dir=self.paths["parsed_pdf_dir"],
             config=self.config,
         )
 
     def selection_gui(self):
-        unique_courses = data_handler.get_unique_courses(self.csv_path[0])
-        instructors = data_handler.get_instructors(self.csv_path[0])
+        unique_courses = data_handler.get_unique_courses(self.enriched_csv)
+        instructors = data_handler.get_instructors(self.enriched_csv)
 
         print("🖥️ Opening Selection GUI (Sessions / Courses / Instructors)")
         (

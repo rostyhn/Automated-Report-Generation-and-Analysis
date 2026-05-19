@@ -101,12 +101,10 @@ def viable_scorecards(json_dir: str, csv_path: str, use_cache=True) -> pd.DataFr
     return result
 
 
-def get_instructors(csv_path: str) -> pd.DataFrame:
+def get_instructors(df) -> pd.DataFrame:
     """
     returns a DataFrame of all unique instructors and how many course sessions they have
     """
-    df = pd.read_csv(csv_path, dtype=str)
-
     cols = ["Instructor", "Instructor First", "Instructor Middle", "Instructor Last"]
     missing = [c for c in cols if c not in df.columns]
     if missing:
@@ -427,7 +425,7 @@ def aggregate_for_row(
     }
 
 
-def get_unique_courses(csv_path):
+def get_unique_courses(df):
     """
     return a dataframe of unique courses in the CSV
 
@@ -437,14 +435,6 @@ def get_unique_courses(csv_path):
         'Unique Instructors'
         'Unique Class Sessions'
     """
-    if isinstance(csv_path, (list, tuple)):
-        if not csv_path:
-            raise ValueError("csv_path list/tuple is empty.")
-        csv_path_use = csv_path[0]
-    else:
-        csv_path_use = csv_path
-
-    df = pd.read_csv(csv_path_use, dtype=str)
 
     base_cols = ["Subject", "Catalog Nbr"]
     extra_cols = ["Instructor", "Class Nbr"]

@@ -16,19 +16,45 @@ else:
     CONFIG_PATH = get_resource_path("configuration/config.json")
 
 gpa_scale = {
-    "A+": 4.33, "A": 4.0, "A-": 3.67,
-    "B+": 3.33, "B": 3.0, "B-": 2.67,
-    "C+": 2.33, "C": 2.0, "D": 1.0, "E": 0.0,
+    "A+": 4.33,
+    "A": 4.0,
+    "A-": 3.67,
+    "B+": 3.33,
+    "B": 3.0,
+    "B-": 2.67,
+    "C+": 2.33,
+    "C": 2.0,
+    "D": 1.0,
+    "E": 0.0,
 }
 
 GRADE_COLS = [
-    "A+", "A", "A-", "B+", "B", "B-",
-    "C+", "C", "D", "E",
-    "EN", "EU", "I", "NR", "NR.1",
-    "W", "X", "XE", "Y", "Z",
+    "A+",
+    "A",
+    "A-",
+    "B+",
+    "B",
+    "B-",
+    "C+",
+    "C",
+    "D",
+    "E",
+    "EN",
+    "EU",
+    "I",
+    "NR",
+    "NR.1",
+    "W",
+    "X",
+    "XE",
+    "Y",
+    "Z",
 ]
 
-def log_to_file(message: str, log_file: str = "application.log", timestamp: bool = True) -> None:
+
+def log_to_file(
+    message: str, log_file: str = "application.log", timestamp: bool = True
+) -> None:
     """
     Append a message to a log file with optional timestamp.
 
@@ -58,11 +84,62 @@ def log_to_file(message: str, log_file: str = "application.log", timestamp: bool
 
     # Append to log file
     try:
-        with open(log_path, 'a', encoding='utf-8') as f:
+        with open(log_path, "a", encoding="utf-8") as f:
             f.write(log_entry)
     except Exception as e:
         # Fallback to stderr if file writing fails
         print(f"Warning: Could not write to log file {log_path}: {e}", file=sys.stderr)
+
+
+def _instructor_name_matches(
+    row_instructor: str,
+    row_first: str,
+    row_last: str,
+    target_instructor: str,
+    target_first: str,
+    target_last: str,
+) -> bool:
+    """
+    Fuzzy instructor name match used consistently across the codebase.
+    Tries full name, then last+first, then last-only fallback.
+    All comparisons are case-insensitive and whitespace-normalized.
+    """
+
+    def norm(s):
+        return re.sub(r"\s+", " ", str(s or "").strip().lower())
+
+    # Build candidate set from target
+    t_full = norm(target_instructor)
+    t_first = norm(target_first)
+    t_last = norm(target_last)
+
+    candidates = {
+        c
+        for c in [
+            t_full,
+            f"{t_first} {t_last}",
+            f"{t_last}, {t_first}",
+            t_last,
+        ]
+        if c.strip()
+    }
+
+    # Try matching against row values
+    r_full = norm(row_instructor)
+    r_first = norm(row_first)
+    r_last = norm(row_last)
+
+    if r_full and r_full in candidates:
+        return True
+    if r_last and r_first and f"{r_first} {r_last}" in candidates:
+        return True
+    if r_last and f"{r_last}, {r_first}" in candidates:
+        return True
+    # Last-name-only fallback
+    if t_last and r_last and t_last == r_last:
+        return True
+
+    return False
 
 
 def load_config(path=None):
@@ -81,7 +158,7 @@ def load_config(path=None):
         path = CONFIG_PATH
 
     # In frozen mode, ensure user config exists by copying from bundled default
-    if getattr(sys, 'frozen', False):
+    if getattr(sys, "frozen", False):
         user_config = get_user_config_path()
         if user_config and not user_config.exists():
             # Copy bundled config to writable location
@@ -93,31 +170,34 @@ def load_config(path=None):
     if not os.path.exists(path):
         raise FileNotFoundError(f"Config file not found at: {path}")
 
-    with open(path, 'r', encoding="utf-8") as f:
-       return json.load(f)
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
 
 def verify_directories(paths):
     print("Initializing file structure")
     # Check input directories
     input_dirs = [
-        paths['pdf_source'], 
-        os.path.dirname(paths['excel_source']), 
-        paths['llm_prompt_dir']
-        ]
+        paths["pdf_source"],
+        os.path.dirname(paths["excel_source"]),
+        paths["llm_prompt_dir"],
+    ]
     for input_dir in input_dirs:
         if not os.path.exists(input_dir):
             print(f"MISSING INPUT DIRECTORY: {input_dir}")
             os.makedirs(input_dir, exist_ok=True)
-            print(f"Created missing input directory: {input_dir}. Please populate it before running the pipeline.")
+            print(
+                f"Created missing input directory: {input_dir}. Please populate it before running the pipeline."
+            )
 
     # Create dutput directories
     output_dirs = [
-        paths['parsed_pdf_dir'],
-        paths['temp_dir'],
-        paths['scorecard_dir'],
-        paths['tex_dir'],
+        paths["parsed_pdf_dir"],
+        paths["temp_dir"],
+        paths["scorecard_dir"],
+        paths["tex_dir"],
     ]
-    
+
     for output_dir in output_dirs:
         # Using exist_ok=True to ensure it creates the directory structure without error
         os.makedirs(output_dir, exist_ok=True)
@@ -125,26 +205,31 @@ def verify_directories(paths):
 
     print("Directory initialization complete\n")
 
+
 def load_pdf_json(pdf_json_path):
     """
     Loads json from a given path
 
     Args:
         pdf_json_path (`str`):
-    
+
     Returns:
         Deserialized json as Python object (`Dict`)
     """
     try:
-        with open(pdf_json_path, 'r', encoding='utf-8') as f:
+        with open(pdf_json_path, "r", encoding="utf-8") as f:
             pdf_json = json.load(f)
             return pdf_json
     except FileNotFoundError:
         print(f"Error: json file not found at: {pdf_json_path}.", file=sys.stderr)
         return None
     except json.JSONDecodeError as e:
-        print(f"Error: Failed to decode json from {pdf_json_path}. Details: {e}", file=sys.stderr)
+        print(
+            f"Error: Failed to decode json from {pdf_json_path}. Details: {e}",
+            file=sys.stderr,
+        )
         return None
+
 
 def _slug(value: Any, fallback: str = "NA") -> str:
     """
@@ -163,6 +248,7 @@ def _slug(value: Any, fallback: str = "NA") -> str:
     s = re.sub(r"[^A-Za-z0-9_]+", "", s)
     return s or fallback
 
+
 def course_to_stem(course):
     """
     From a course row build the stem used for filenames
@@ -170,7 +256,7 @@ def course_to_stem(course):
     """
     subject = _slug(course.get("Subject"))
     catalog = _slug(course.get("Catalog Nbr"))
-    
+
     instructor_last = _slug(
         course.get("Instructor Last")
         or course.get("Instructor_Last")
@@ -189,6 +275,7 @@ def course_to_stem(course):
 
     return f"{subject}_{catalog}_{instructor_last}_{term}_{year}_{class_nbr}"
 
+
 def instructor_to_stem(course):
     """
     From a instructor row build the stem used for filenames
@@ -206,6 +293,7 @@ def instructor_to_stem(course):
     )
 
     return f"{instructor_last}_{instructor_first}"
+
 
 def course_to_output_filename(course):
     """
@@ -235,6 +323,7 @@ def course_to_output_filename(course):
     )
 
     return f"{subject}_{catalog}_{instructor_last}_{instructor_first}_{term}_{year}_{class_nbr}"
+
 
 def _parse_filename(filename: str):
     """
@@ -268,6 +357,7 @@ def _parse_filename(filename: str):
         "class_nbr": class_nbr,
     }
 
+
 def course_to_json_path(course, json_dir=None, config=None):
     """
     From a course row, return the full JSON path where that course's JSON should be
@@ -290,6 +380,7 @@ def course_to_json_path(course, json_dir=None, config=None):
     stem = course_to_stem(course)
     return os.path.join(json_dir, f"{stem}.json")
 
+
 def _get_numeric(course: Mapping[str, Any], key: str) -> float:
     """
     Go from a course (row in the CSV) and a key to a float safely
@@ -302,6 +393,7 @@ def _get_numeric(course: Mapping[str, Any], key: str) -> float:
     except (TypeError, ValueError):
         return 0.0
 
+
 def _is_true(val: Any) -> bool:
     """
     True if str(val).lower() == "true"
@@ -310,18 +402,20 @@ def _is_true(val: Any) -> bool:
     """
     return str(val).lower() == "true"
 
+
 def _is_hundred(val: Any) -> bool:
     """
     True if str(val).lower() == "hundred"
-    
+
     This is for reading match_catalog_number in the config.json, since it can be "true", "false", or "hundred"
     """
     return str(val).lower() == "hundred"
 
+
 def _same_hundred_level(cat1: Any, cat2: Any) -> bool:
     """
     return True if two catalog numbers are in the same x00 x99 band
-    
+
     this is used when match_catalog_number == "hundred"
     """
     n1 = _parse_catalog_int(cat1)
@@ -329,6 +423,7 @@ def _same_hundred_level(cat1: Any, cat2: Any) -> bool:
     if n1 is None or n2 is None:
         return False
     return (n1 // 100) == (n2 // 100)
+
 
 def _parse_catalog_int(value: Any) -> Optional[int]:
     """
@@ -346,7 +441,8 @@ def _parse_catalog_int(value: Any) -> Optional[int]:
         return int(m.group(0))
     except ValueError:
         return None
-    
+
+
 def _safe_int(val) -> int | None:
     """Returns int(val) or None if val is None, or if int(val) results in a Type or Value error"""
     if val is None:
@@ -365,6 +461,7 @@ def _safe_float(val) -> float | None:
         return float(val)
     except (TypeError, ValueError):
         return None
+
 
 def cleanup_scorecard_pngs(config) -> None:
     """
@@ -394,3 +491,4 @@ def cleanup_scorecard_pngs(config) -> None:
 
     if removed:
         print(f"🗑️ Removed {removed} staging PNG(s) from {scorecard_dir}")
+

@@ -14,19 +14,20 @@ from src.utils import _slug, _get_numeric
 _GRADE_ORDER = ["E", "D", "C", "C+", "B-", "B", "B+", "A-", "A", "A+"]
 
 _GRADE_GRADIENTS = {
-    "A": ("#ff3b19", "#f6b644"),  
-    "B": ("#0e7300", "#6be002"),  
-    "C": ("#1d38a1", "#0067f3"),  
-    "D": ("#930008", "#d90014"),  
-    "E": ("#930008", "#d90014"),  
+    "A": ("#ff3b19", "#f6b644"),
+    "B": ("#0e7300", "#6be002"),
+    "C": ("#1d38a1", "#0067f3"),
+    "D": ("#930008", "#d90014"),
+    "E": ("#930008", "#d90014"),
 }
 
+
 def generate_data_visualization(
-        config, 
-        selected_scorecard_courses, 
-        selected_scorecard_instructors,
-        csv_path,
-        selected_history_courses,
+    config,
+    selected_scorecard_courses,
+    selected_scorecard_instructors,
+    csv_path,
+    selected_history_courses,
 ):
     """
     This function automates the creation of all data vis images
@@ -46,7 +47,7 @@ def generate_data_visualization(
     # Active visualization scope: histogram + course history + instructor overlay + instructor histograms.
     _generate(
         selected_scorecard_courses,
-        "  🏫 Generating Course Data Visualizations", 
+        "  🏫 Generating Course Data Visualizations",
         "  ⛔ No courses selected for course data visualizations. Skipping course data visualization generation.",
         generate_course_grade_histogram,
         csv_path,
@@ -54,7 +55,7 @@ def generate_data_visualization(
 
     _generate(
         selected_history_courses,
-        "  🕰️ Generating Course History Graphs", 
+        "  🕰️ Generating Course History Graphs",
         "  ⛔ No courses selected for history graphs. Skipping course history generation.",
         generate_course_history_graph,
         csv_path,
@@ -75,6 +76,7 @@ def generate_data_visualization(
         generate_instructor_course_histograms,
         csv_path,
     )
+
 
 def generate_course_grade_histogram(
     config: Mapping[str, Any],
@@ -106,15 +108,10 @@ def generate_course_grade_histogram(
     if not json_dir:
         raise KeyError("parsed_pdf_dir/json_dir not found in config['paths'].")
 
-    comparison = (
-        config.get("comparison")
-        or config.get("baseline_comparison")
-        or {}
-    )
+    comparison = config.get("comparison") or config.get("baseline_comparison") or {}
 
     plot_cfg = (
-        config.get("plots", {})
-        .get("grade_histogram", {})
+        config.get("plots", {}).get("grade_histogram", {})
         or config.get("grade_histogram", {})
         or {}
     )
@@ -175,8 +172,7 @@ def generate_course_grade_histogram(
 
     # scale baseline to total students
     baseline_values = [
-        float(baseline_percentages.get(g, 0.0)) * total_students
-        for g in _GRADE_ORDER
+        float(baseline_percentages.get(g, 0.0)) * total_students for g in _GRADE_ORDER
     ]
 
     # build filename ####################################################
@@ -193,7 +189,9 @@ def generate_course_grade_histogram(
         or course.get("course_number")
     )
 
-    filename = f"{department}_{course_code}_{professor}_{term}_{year}_{course_number}.png"
+    filename = (
+        f"{department}_{course_code}_{professor}_{term}_{year}_{course_number}.png"
+    )
     out_path = os.path.join(grade_hist_dir, filename)
 
     # plotting ####################################################
@@ -288,7 +286,9 @@ def generate_course_grade_histogram(
 
     # legend is off by default for tiny embeds to keep only axes readable
     if show_legend:
-        ax.legend(loc="upper left", fontsize=legend_fontsize, frameon=False, handlelength=1.8)
+        ax.legend(
+            loc="upper left", fontsize=legend_fontsize, frameon=False, handlelength=1.8
+        )
 
     # only grade labels at the bottom
     ax.set_xticks(x)
@@ -298,10 +298,14 @@ def generate_course_grade_histogram(
     ax.set_xlabel("")
     ax.set_ylabel("")
     ax.set_title("")
-    ax.tick_params(axis="y", which="major", left=True, labelleft=True, labelsize=y_tick_fontsize)
+    ax.tick_params(
+        axis="y", which="major", left=True, labelleft=True, labelsize=y_tick_fontsize
+    )
 
     # Keep y-axis readable with light horizontal guides.
-    y_max_data = max([0.0] + [float(v) for v in course_counts] + [float(v) for v in baseline_values])
+    y_max_data = max(
+        [0.0] + [float(v) for v in course_counts] + [float(v) for v in baseline_values]
+    )
     y_top = max(1.0, y_max_data * 1.12)
     y_step = max(1, int(plot_cfg.get("y_tick_step", 5)))
     y_top_rounded = int(math.ceil(y_top / y_step) * y_step)
@@ -334,13 +338,14 @@ def generate_course_grade_histogram(
     print(f"    ✅ Generated course grade histogram: {out_path}")
     return out_path
 
+
 def generate_course_history_graph(
-        config: Mapping[str, Any],
-        course: Mapping[str, Any],
-        csv_path,
+    config: Mapping[str, Any],
+    course: Mapping[str, Any],
+    csv_path,
 ):
     """
-    (This function (and the documentation) is pretty vibe coded. If any changes are needed to this, just look at 
+    (This function (and the documentation) is pretty vibe coded. If any changes are needed to this, just look at
     matplotlib docs and try to look for the specific thing you need, since this is a bit messy)
 
     GPA-over-time history graph for a single course.
@@ -397,9 +402,9 @@ def generate_course_history_graph(
     delta_color_medium = plot_cfg.get("delta_color_medium", "#ffbf00")
     delta_color_large = plot_cfg.get("delta_color_large", "#d62728")
     delta_label_fontsize = float(plot_cfg.get("delta_label_fontsize", 7))
-    delta_sparkline_enabled = str(
-        plot_cfg.get("delta_sparkline_enabled", "true")
-    ).lower() == "true"
+    delta_sparkline_enabled = (
+        str(plot_cfg.get("delta_sparkline_enabled", "true")).lower() == "true"
+    )
     delta_sparkline_width = float(plot_cfg.get("delta_sparkline_width", 0.22))
     delta_sparkline_height = float(plot_cfg.get("delta_sparkline_height", 0.18))
     delta_sparkline_right = float(plot_cfg.get("delta_sparkline_right", 0.98))
@@ -424,9 +429,9 @@ def generate_course_history_graph(
         plot_cfg.get("instructor_linewidth", plot_cfg.get("marker_edge_width", 2.0))
     )
 
-    instructor_connect_points = str(
-        plot_cfg.get("course_history_connect_points", "true")
-    ).lower() == "true"
+    instructor_connect_points = (
+        str(plot_cfg.get("course_history_connect_points", "true")).lower() == "true"
+    )
 
     # Marker / linestyle options for instructors
     marker_options = plot_cfg.get(
@@ -455,17 +460,20 @@ def generate_course_history_graph(
     catalog = str(course.get("Catalog Nbr") or "").strip()
 
     if not subject or not catalog:
-        print("    ⚠️ Skipping course history graph for row with missing Subject/Catalog Nbr")
+        print(
+            "    ⚠️ Skipping course history graph for row with missing Subject/Catalog Nbr"
+        )
         return None
 
-    mask = (
-        df["Subject"].astype(str).str.strip().eq(subject)
-        & df["Catalog Nbr"].astype(str).str.strip().eq(catalog)
-    )
+    mask = df["Subject"].astype(str).str.strip().eq(subject) & df["Catalog Nbr"].astype(
+        str
+    ).str.strip().eq(catalog)
     df_course = df[mask].copy()
 
     if df_course.empty:
-        print(f"    ⚠️ No rows found for course {subject} {catalog} in CSV. Skipping history graph.")
+        print(
+            f"    ⚠️ No rows found for course {subject} {catalog} in CSV. Skipping history graph."
+        )
         return None
 
     # Decode semester from STRM or (Term, Year) ###################################
@@ -491,17 +499,21 @@ def generate_course_history_graph(
     # Fallback to explicit term/year labels
     if df_course["Semester"].isna().all():
         if "Term" in df_course.columns and "Year" in df_course.columns:
+
             def _term_year(row):
                 term = str(row.get("Term") or "").strip()
                 year = str(row.get("Year") or "").strip()
                 if not term or not year:
                     return None
                 return f"{term} {year}"
+
             df_course["Semester"] = df_course.apply(_term_year, axis=1)
 
     df_course = df_course[df_course["Semester"].notna()].copy()
     if df_course.empty:
-        print(f"    ⚠️ No semester information for course {subject} {catalog}. Skipping history graph.")
+        print(
+            f"    ⚠️ No semester information for course {subject} {catalog}. Skipping history graph."
+        )
         return None
 
     # normalise instructor names
@@ -515,7 +527,9 @@ def generate_course_history_graph(
     # drop rows without GPA
     df_course = df_course[df_course["Average_GPA"].notna()].copy()
     if df_course.empty:
-        print(f"    ⚠️ No GPA data for course {subject} {catalog}. Skipping history graph.")
+        print(
+            f"    ⚠️ No GPA data for course {subject} {catalog}. Skipping history graph."
+        )
         return None
 
     # determine semester order ###################################################
@@ -535,9 +549,8 @@ def generate_course_history_graph(
     )
 
     # aggregate GPA by semester and instructor ###################################
-    grouped = (
-        df_course.groupby(["Semester", "Instructor"], as_index=False)
-        .agg({"Average_GPA": "mean"})
+    grouped = df_course.groupby(["Semester", "Instructor"], as_index=False).agg(
+        {"Average_GPA": "mean"}
     )
 
     instructors = [i for i in grouped["Instructor"].unique() if i != "(no data)"]
@@ -549,7 +562,9 @@ def generate_course_history_graph(
     )
 
     if stats.empty:
-        print(f"    ⚠️ Not enough data to compute aggregate stats for {subject} {catalog}. Skipping history graph.")
+        print(
+            f"    ⚠️ Not enough data to compute aggregate stats for {subject} {catalog}. Skipping history graph."
+        )
         return None
 
     stats["std_gpa"] = stats["std_gpa"].fillna(0.0)
@@ -650,7 +665,7 @@ def generate_course_history_graph(
         ys = sub["Average_GPA"].astype(float).values
 
         marker, linestyle, color = instructor_styles[inst]
-        
+
         line_style = linestyle if instructor_connect_points else "None"
 
         ax.plot(
@@ -710,8 +725,12 @@ def generate_course_history_graph(
 
         spark_width = min(max(delta_sparkline_width, 0.10), 0.45)
         spark_height = min(max(delta_sparkline_height, 0.10), 0.35)
-        spark_left = min(max(delta_sparkline_right - spark_width, 0.52), 0.98 - spark_width)
-        spark_bottom = min(max(delta_sparkline_top - spark_height, 0.55), 0.98 - spark_height)
+        spark_left = min(
+            max(delta_sparkline_right - spark_width, 0.52), 0.98 - spark_width
+        )
+        spark_bottom = min(
+            max(delta_sparkline_top - spark_height, 0.55), 0.98 - spark_height
+        )
         spark_ax = ax.inset_axes(
             [spark_left, spark_bottom, spark_width, spark_height],
             transform=ax.transAxes,
@@ -773,7 +792,7 @@ def generate_course_history_graph(
     plt.close(fig)
 
     print(f"    ✅ Generated course history graph: {out_path}")
-    
+
     return out_path
 
 
@@ -793,9 +812,8 @@ def generate_instructor_course_history_overlay_graph(
     If output_override is provided, saves to that exact path instead.
     """
     paths = config.get("paths", {}) or config.get("PATHS", {})
-    output_dir = (
-        paths.get("instructor_overlay_dir")
-        or os.path.join(paths.get("temp_dir", "temporary_files"), "instructor_overlays")
+    output_dir = paths.get("instructor_overlay_dir") or os.path.join(
+        paths.get("temp_dir", "temporary_files"), "instructor_overlays"
     )
     if not output_dir:
         raise KeyError("instructor_overlay_dir not found in config['paths'].")
@@ -803,8 +821,7 @@ def generate_instructor_course_history_overlay_graph(
 
     # Compact defaults for small image embedding in instructor short cards.
     plot_cfg = (
-        config.get("plots", {}).get("instructor_course_history_overlay", {})
-        or {}
+        config.get("plots", {}).get("instructor_course_history_overlay", {}) or {}
     )
     dpi = int(plot_cfg.get("dpi", 130))
     width_px = int(plot_cfg.get("width_px", 1335))
@@ -819,7 +836,9 @@ def generate_instructor_course_history_overlay_graph(
 
     if isinstance(csv_path, (list, tuple)):
         if not csv_path:
-            print("    ⚠️ csv_path list/tuple is empty. Skipping instructor overlay history graph.")
+            print(
+                "    ⚠️ csv_path list/tuple is empty. Skipping instructor overlay history graph."
+            )
             return None
         csv_path_use = csv_path[0]
     else:
@@ -831,16 +850,19 @@ def generate_instructor_course_history_overlay_graph(
     subject = str(course.get("Subject") or "").strip()
     catalog = str(course.get("Catalog Nbr") or "").strip()
     if not subject or not catalog:
-        print("    ⚠️ Missing Subject/Catalog Nbr. Skipping instructor overlay history graph.")
+        print(
+            "    ⚠️ Missing Subject/Catalog Nbr. Skipping instructor overlay history graph."
+        )
         return None
 
     # Target course rows are used for the instructor-specific line.
-    mask_exact_course = (
-        df["Subject"].astype(str).str.strip().eq(subject)
-        & df["Catalog Nbr"].astype(str).str.strip().eq(catalog)
-    )
+    mask_exact_course = df["Subject"].astype(str).str.strip().eq(subject) & df[
+        "Catalog Nbr"
+    ].astype(str).str.strip().eq(catalog)
     if not mask_exact_course.any():
-        print(f"    ⚠️ No rows found for course {subject} {catalog}. Skipping instructor overlay history graph.")
+        print(
+            f"    ⚠️ No rows found for course {subject} {catalog}. Skipping instructor overlay history graph."
+        )
         return None
 
     def _course_level(catalog_value):
@@ -854,7 +876,9 @@ def generate_instructor_course_history_overlay_graph(
 
     course_level = _course_level(catalog)
     if course_level is None:
-        print(f"    ⚠️ Could not parse course level for {subject} {catalog}. Skipping instructor overlay history graph.")
+        print(
+            f"    ⚠️ Could not parse course level for {subject} {catalog}. Skipping instructor overlay history graph."
+        )
         return None
 
     df["Course Level"] = df["Catalog Nbr"].map(_course_level)
@@ -878,17 +902,18 @@ def generate_instructor_course_history_overlay_graph(
 
     if df["Semester"].isna().all():
         if "Term" in df.columns and "Year" in df.columns:
+
             def _term_year(row):
                 term = str(row.get("Term") or "").strip()
                 year = str(row.get("Year") or "").strip()
                 return f"{term} {year}" if term and year else None
+
             df["Semester"] = df.apply(_term_year, axis=1)
 
     # Baseline rows are all same-subject courses in the same 100-level bucket.
-    baseline_mask = (
-        df["Subject"].astype(str).str.strip().eq(subject)
-        & df["Course Level"].eq(course_level)
-    )
+    baseline_mask = df["Subject"].astype(str).str.strip().eq(subject) & df[
+        "Course Level"
+    ].eq(course_level)
     df_baseline = df[baseline_mask].copy()
     df_baseline = df_baseline[df_baseline["Semester"].notna()].copy()
     df_baseline = df_baseline[df_baseline["Average_GPA"].notna()].copy()
@@ -904,7 +929,9 @@ def generate_instructor_course_history_overlay_graph(
     df_exact_course = df_exact_course[df_exact_course["Semester"].notna()].copy()
     df_exact_course = df_exact_course[df_exact_course["Average_GPA"].notna()].copy()
     if df_exact_course.empty:
-        print(f"    ⚠️ No semester/GPA data for {subject} {catalog}. Skipping instructor overlay history graph.")
+        print(
+            f"    ⚠️ No semester/GPA data for {subject} {catalog}. Skipping instructor overlay history graph."
+        )
         return None
 
     if "Instructor" in df_baseline.columns:
@@ -931,15 +958,15 @@ def generate_instructor_course_history_overlay_graph(
             return (9999, 99)
 
     semester_values = sorted(
-        set(df_baseline["Semester"].dropna().unique()) | set(df_exact_course["Semester"].dropna().unique()),
+        set(df_baseline["Semester"].dropna().unique())
+        | set(df_exact_course["Semester"].dropna().unique()),
         key=_semester_key,
     )
     semester_order = semester_values
     sem_to_x = {sem: idx for idx, sem in enumerate(semester_order)}
 
-    grouped = (
-        df_baseline.groupby(["Semester", "Instructor"], as_index=False)
-        .agg({"Average_GPA": "mean"})
+    grouped = df_baseline.groupby(["Semester", "Instructor"], as_index=False).agg(
+        {"Average_GPA": "mean"}
     )
 
     stats = (
@@ -948,7 +975,9 @@ def generate_instructor_course_history_overlay_graph(
         .agg(mean_gpa=("Average_GPA", "mean"), std_gpa=("Average_GPA", "std"))
     )
     if stats.empty:
-        print(f"    ⚠️ Not enough aggregate history for {subject} {catalog}. Skipping instructor overlay history graph.")
+        print(
+            f"    ⚠️ Not enough aggregate history for {subject} {catalog}. Skipping instructor overlay history graph."
+        )
         return None
 
     stats["std_gpa"] = stats["std_gpa"].fillna(0.0)
@@ -963,8 +992,12 @@ def generate_instructor_course_history_overlay_graph(
     else:
         inst_get = lambda key: instructor.get(key)
 
-    target_first = str(inst_get("Instructor First") or course.get("Instructor First") or "").strip()
-    target_last = str(inst_get("Instructor Last") or course.get("Instructor Last") or "").strip()
+    target_first = str(
+        inst_get("Instructor First") or course.get("Instructor First") or ""
+    ).strip()
+    target_last = str(
+        inst_get("Instructor Last") or course.get("Instructor Last") or ""
+    ).strip()
     target_full = str(inst_get("Instructor") or course.get("Instructor") or "").strip()
     target_candidates = {
         _norm_text(target_full),
@@ -974,30 +1007,41 @@ def generate_instructor_course_history_overlay_graph(
     target_candidates.discard("")
 
     norm_instructors = df_exact_course["Instructor"].map(_norm_text)
-    target_mask = norm_instructors.isin(target_candidates) if target_candidates else pd.Series(False, index=df_exact_course.index)
+    target_mask = (
+        norm_instructors.isin(target_candidates)
+        if target_candidates
+        else pd.Series(False, index=df_exact_course.index)
+    )
 
     # Last-name fallback for inconsistent instructor formatting in CSV exports.
     if not target_mask.any() and target_last:
-        target_mask = df_exact_course["Instructor"].astype(str).str.contains(
-            rf"\b{re.escape(target_last)}\b",
-            regex=True,
-            case=False,
-            na=False,
+        target_mask = (
+            df_exact_course["Instructor"]
+            .astype(str)
+            .str.contains(
+                rf"\b{re.escape(target_last)}\b",
+                regex=True,
+                case=False,
+                na=False,
+            )
         )
 
     df_target = df_exact_course[target_mask].copy()
     if df_target.empty:
-        print(f"    ⚠️ No instructor-specific points found for {subject} {catalog}. Skipping instructor overlay history graph.")
+        print(
+            f"    ⚠️ No instructor-specific points found for {subject} {catalog}. Skipping instructor overlay history graph."
+        )
         return None
 
-    target_grouped = (
-        df_target.groupby("Semester", as_index=False)
-        .agg(instructor_gpa=("Average_GPA", "mean"))
+    target_grouped = df_target.groupby("Semester", as_index=False).agg(
+        instructor_gpa=("Average_GPA", "mean")
     )
     target_grouped["x"] = target_grouped["Semester"].map(sem_to_x)
     target_grouped = target_grouped.dropna(subset=["x"]).sort_values("x")
     if target_grouped.empty:
-        print(f"    ⚠️ Instructor points could not be mapped to semesters for {subject} {catalog}.")
+        print(
+            f"    ⚠️ Instructor points could not be mapped to semesters for {subject} {catalog}."
+        )
         return None
 
     all_gpas = pd.concat(
@@ -1057,8 +1101,14 @@ def generate_instructor_course_history_overlay_graph(
     ax.set_xlim(-0.5, len(semester_order) - 0.5)
     ax.set_ylabel("GPA", fontsize=11.5)
     ax.set_xlabel("Semester", fontsize=11)
-    display_instructor = target_full or " ".join([p for p in [target_first, target_last] if p]).strip() or "Instructor"
-    ax.set_title(f"{subject} {catalog} GPA History - {display_instructor}", fontsize=13, pad=8)
+    display_instructor = (
+        target_full
+        or " ".join([p for p in [target_first, target_last] if p]).strip()
+        or "Instructor"
+    )
+    ax.set_title(
+        f"{subject} {catalog} GPA History - {display_instructor}", fontsize=13, pad=8
+    )
     ax.grid(axis="y", linestyle=":", linewidth=0.7, alpha=0.38)
     ax.tick_params(axis="y", labelsize=10)
 
@@ -1098,9 +1148,13 @@ def generate_instructor_course_history_overlay_graphs(
     Generate one overlay graph per course taught by a selected instructor.
     """
     # Do not require parsed JSON for visualization-only generation.
-    instructor_courses = data_handler.get_courses_by_instructor(instructor, csv_path, False)
+    instructor_courses = data_handler.get_courses_by_instructor(
+        instructor, csv_path, False
+    )
     if instructor_courses is None or instructor_courses.empty:
-        inst_name = str(instructor.get("Instructor", "")).strip() or "Unknown instructor"
+        inst_name = (
+            str(instructor.get("Instructor", "")).strip() or "Unknown instructor"
+        )
         print(f"    ⚠️ No courses found for {inst_name}. Skipping overlay graphs.")
         return None
 
@@ -1134,9 +1188,13 @@ def generate_instructor_course_histograms(
     """
     Generate one existing course histogram per course taught by a selected instructor.
     """
-    instructor_courses = data_handler.get_courses_by_instructor(instructor, csv_path, False)
+    instructor_courses = data_handler.get_courses_by_instructor(
+        instructor, csv_path, False
+    )
     if instructor_courses is None or instructor_courses.empty:
-        inst_name = str(instructor.get("Instructor", "")).strip() or "Unknown instructor"
+        inst_name = (
+            str(instructor.get("Instructor", "")).strip() or "Unknown instructor"
+        )
         print(f"    ⚠️ No courses found for {inst_name}. Skipping histogram generation.")
         return None
 
@@ -1150,3 +1208,4 @@ def generate_instructor_course_histograms(
         if out_path:
             out_paths.append(out_path)
     return out_paths
+
