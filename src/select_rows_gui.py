@@ -62,7 +62,7 @@ GUI_TEXT = {
             "For each course session selected, a Scorecard is created for them, containing a more in depth summary of both the\n"
             "instructor evaluation metrics and grade information for a given course session. Also includes LLM summarization of\n"
             "positive/negative student comments from evaluation.\n\n"
-            "REQUIRED: Only courses with both an instructor evaluation and a row in the spreadsheet will generate a scorecard.\n\n" 
+            "REQUIRED: Only courses with both an instructor evaluation and a row in the spreadsheet will generate a scorecard.\n\n"
             "Click \u201cConfirm\u201d once all course sessions of interest have been selected to generate course session scorecard(s)."
         ),
     },
@@ -124,11 +124,13 @@ class _SelectionTab:
         bottom_frame = ttk.Frame(self.frame)
         bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
 
-        ttk.Button(bottom_frame, text="Select All (visible)", command=self._on_select_all).pack(
-            side=tk.LEFT, padx=(0, 5)
-        )
         ttk.Button(
-            bottom_frame, text="Clear Selection (visible)", command=self._on_clear_selection
+            bottom_frame, text="Select All (visible)", command=self._on_select_all
+        ).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(
+            bottom_frame,
+            text="Clear Selection (visible)",
+            command=self._on_clear_selection,
         ).pack(side=tk.LEFT, padx=(0, 5))
 
         if self.confirm_callback:
@@ -169,7 +171,9 @@ class _SelectionTab:
         ttk.Label(search_frame, text="Column:").pack(side=tk.LEFT, padx=(0, 5))
 
         self.col_var = tk.StringVar()
-        self.col_combo = ttk.Combobox(search_frame, textvariable=self.col_var, state="readonly")
+        self.col_combo = ttk.Combobox(
+            search_frame, textvariable=self.col_var, state="readonly"
+        )
         self.col_combo["values"] = list(self.visible_cols)
         if len(self.visible_cols) > 0:
             self.col_combo.current(0)
@@ -181,9 +185,12 @@ class _SelectionTab:
         search_entry = ttk.Entry(search_frame, textvariable=self.search_var, width=30)
         search_entry.pack(side=tk.LEFT, padx=(0, 10))
 
-        ttk.Button(search_frame, text="Search", style="Accent.TButton", command=self._apply_filter).pack(
-            side=tk.LEFT, padx=(0, 5)
-        )
+        ttk.Button(
+            search_frame,
+            text="Search",
+            style="Accent.TButton",
+            command=self._apply_filter,
+        ).pack(side=tk.LEFT, padx=(0, 5))
         ttk.Button(search_frame, text="Reset", command=self._reset_filter).pack(
             side=tk.LEFT
         )
@@ -269,7 +276,9 @@ class _SelectionTab:
             tree_font.measure("\u2611"),
             tree_font.measure("\u2610"),
         )
-        self.tree.column("__selected__", width=max_sel_width + padding, anchor=tk.CENTER)
+        self.tree.column(
+            "__selected__", width=max_sel_width + padding, anchor=tk.CENTER
+        )
 
         # Dataframe columns (only visible ones)
         for col in self.visible_cols:
@@ -373,7 +382,9 @@ class _SelectionTab:
             return self.df.iloc[0:0].copy()
 
 
-def select_rows_gui(df: pd.DataFrame, instruction_text: str, title_text: str) -> pd.DataFrame:
+def select_rows_gui(
+    df: pd.DataFrame, instruction_text: str, title_text: str
+) -> pd.DataFrame:
     """
     backwards-compatible single-dataframe selection window
     """
@@ -393,7 +404,9 @@ def select_rows_gui(df: pd.DataFrame, instruction_text: str, title_text: str) ->
     notebook = ttk.Notebook(root)
     notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-    tab = _SelectionTab(notebook, df, instruction_text, title_text, confirm_callback=on_confirm)
+    tab = _SelectionTab(
+        notebook, df, instruction_text, title_text, confirm_callback=on_confirm
+    )
 
     fit_window_to_screen(root, 1280, 720)
     root.mainloop()
@@ -424,12 +437,21 @@ def select_rows_gui_with_tabs(
         if df is None:
             return pd.DataFrame()
         if not isinstance(df, pd.DataFrame):
-            raise TypeError("select_rows_gui_with_tabs expects pandas.DataFrame objects.")
+            raise TypeError(
+                "select_rows_gui_with_tabs expects pandas.DataFrame objects."
+            )
         return df
 
     scorecard_sessions_df = _normalize(scorecard_sessions_df)
     course_history_df = _normalize(course_history_df)
     instructor_df = _normalize(instructor_df)
+
+    print("sessions")
+    print(scorecard_sessions_df.columns)
+    print("history")
+    print(course_history_df.columns)
+    print("instructors")
+    print(instructor_df.columns)
 
     enable_dpi_awareness()
     root = tk.Tk()
@@ -442,11 +464,22 @@ def select_rows_gui_with_tabs(
         "instructor": None,
     }
 
+    # course sessions are our smallest unit
     # Define confirm callback before creating tabs so every tab gets a Confirm button
     def on_confirm():
         results["scorecard"] = session_tab.get_selected_dataframe()
         results["history"] = course_tab.get_selected_dataframe()
         results["instructor"] = instructor_tab.get_selected_dataframe()
+        # add all sessions if an instructor is selected
+        if not results["instructor"].empty:
+            for instructor in results["instructor"]["Instructor"]:
+                selected = scorecard_sessions_df.loc[
+                    scorecard_sessions_df["Instructor"] == instructor
+                ]
+                results["scorecard"] = pd.concat(
+                    [results["scorecard"], selected], ignore_index=True
+                )
+
         root.destroy()
 
     notebook = ttk.Notebook(root)
@@ -480,6 +513,8 @@ def select_rows_gui_with_tabs(
     fit_window_to_screen(root, 1280, 720)
     root.mainloop()
 
+    # using instructor, select course sessions that belong to them
+
     # if the user closes the window without confirming, return empty dfs with matching columns
     if results["scorecard"] is None:
         results["scorecard"] = scorecard_sessions_df.iloc[0:0].copy()
@@ -487,5 +522,8 @@ def select_rows_gui_with_tabs(
         results["history"] = course_history_df.iloc[0:0].copy()
     if results["instructor"] is None:
         results["instructor"] = instructor_df.iloc[0:0].copy()
+
+    print("selected sessions")
+    print(results["scorecard"])
 
     return results["scorecard"], results["history"], results["instructor"]

@@ -5,28 +5,50 @@ import re
 import statistics
 from typing import Any, Dict, Mapping, Optional, List, Tuple
 import pandas as pd
-from src.utils import _is_true, _is_hundred, gpa_scale, GRADE_COLS, _parse_filename, _same_hundred_level, _parse_catalog_int, course_to_json_path
+from src.utils import (
+    _is_true,
+    _is_hundred,
+    gpa_scale,
+    GRADE_COLS,
+    _parse_filename,
+    _same_hundred_level,
+    _parse_catalog_int,
+    course_to_json_path,
+)
 from src import compute_metrics
+import pickle
 
-def viable_scorecards(json_dir: str, csv_path: str) -> pd.DataFrame:
+
+def viable_scorecards(json_dir: str, csv_path: str, use_cache=True) -> pd.DataFrame:
     """
     This function looks through the name of each of the json files one at a time.
 
-    For each of these json files, if the info in the file name matches one of the 
+    For each of these json files, if the info in the file name matches one of the
     rows in the csv, that row of the csv is added to the dataframe that is eventually returned.
 
     The eventually returned dataframe is the overlap in courses found between the CSV and json
-    directory folder. 
+    directory folder.
     """
     # Read CSV as strings for reliable matching
     df = pd.read_csv(csv_path, dtype=str)
 
     # normalize columns
-    for col in ["Subject", "Catalog Nbr", "Instructor Last", "Term", "Year", "Class Nbr"]:
+    for col in [
+        "Subject",
+        "Catalog Nbr",
+        "Instructor Last",
+        "Term",
+        "Year",
+        "Class Nbr",
+    ]:
         if col in df.columns:
             df[col] = df[col].astype(str).str.strip()
 
     matched_rows = []
+    pk = "temporary_files/viable_scorecards.pickle"
+    if os.path.exists(pk) and use_cache:
+        with open(pk, "rb") as f:
+            return pickle.load(f)
 
     # scan directory
     for fname in os.listdir(json_dir):
@@ -49,12 +71,12 @@ def viable_scorecards(json_dir: str, csv_path: str) -> pd.DataFrame:
         class_nbr = info["class_nbr"]
 
         mask = (
-            (df["Subject"] == subject) &
-            (df["Catalog Nbr"] == catalog_nbr) &
-            (df["Instructor Last"] == instructor_last) &
-            (df["Term"] == term) &
-            (df["Year"] == year) &
-            (df["Class Nbr"] == class_nbr)
+            (df["Subject"] == subject)
+            & (df["Catalog Nbr"] == catalog_nbr)
+            & (df["Instructor Last"] == instructor_last)
+            & (df["Term"] == term)
+            & (df["Year"] == year)
+            & (df["Class Nbr"] == class_nbr)
         )
 
         if term is not None and "Term" in df.columns:
@@ -67,13 +89,17 @@ def viable_scorecards(json_dir: str, csv_path: str) -> pd.DataFrame:
         else:
             print(f"  ✅ Matching JSON and CSV found for '{fname}'")
             matched_rows.append(rows)
-    
+
     if matched_rows:
         result = pd.concat(matched_rows, ignore_index=True)
     else:
         result = df.iloc[0:0].copy()
 
+    with open(pk, "wb") as f:
+        pickle.dump(result, f)
+
     return result
+
 
 def get_instructors(csv_path: str) -> pd.DataFrame:
     """
@@ -89,42 +115,11 @@ def get_instructors(csv_path: str) -> pd.DataFrame:
     for c in cols:
         df[c] = df[c].fillna("").astype(str).str.strip()
 
-    result = (
-        df.groupby(cols, dropna=False)
-          .size()
-          .reset_index(name="Number of Courses")
-    )
+    result = df.groupby(cols, dropna=False).size().reset_index(name="Number of Courses")
 
     return result
 
-def compute_course_gpa(row_like: Mapping[str, Any], scale: Dict[str, float]) -> Optional[float]:
-    """
-    THIS FUNCTION IS DEPRECIATED!!! 
-    csv_cleaner computes GPAs and adds it as a column "GPA"
-    
-    Don't use this, it will be removed eventually
 
-    (old documentation)
-    compute GPA for a single course row from CSV data
-    uses gpa_scale and only A+ through E, ignores EN EU W I etc.
-    """
-    total_points = 0.0
-    total_count = 0
-
-    for grade, weight in scale.items():
-        if grade in row_like:
-            count = row_like[grade]
-            if pd.isna(count):
-                continue
-            cnt = int(count)
-            total_points += cnt * weight
-            total_count += cnt
-
-    if total_count == 0:
-        return None
-    return total_points / total_count
-    
-    
 def describe_aggregate(
     comparison: Dict[str, Any],
     row: Mapping[str, Any],
@@ -196,6 +191,7 @@ def describe_aggregate(
     else:
         return "All Available Courses"
 
+
 def aggregate_for_row(
     comparison: Dict[str, Any],
     row: Mapping[str, Any],
@@ -203,7 +199,7 @@ def aggregate_for_row(
     csv_path: str,
 ) -> Dict[str, Any]:
     """
-    (This documentation (and some comments) are LLM generated, 
+    (This documentation (and some comments) are LLM generated,
     reach out to Joey if any of this doesn't make sense/needs clarification)
 
     Aggregate metrics over all courses that match `row` according to `comparison`.
@@ -272,9 +268,7 @@ def aggregate_for_row(
         mask &= df["Catalog Nbr"] == catalog_val
     elif _is_hundred(match_catalog):
         target_cat = catalog_val
-        mask &= df["Catalog Nbr"].apply(
-            lambda x: _same_hundred_level(x, target_cat)
-        )
+        mask &= df["Catalog Nbr"].apply(lambda x: _same_hundred_level(x, target_cat))
 
     matched_df = df[mask].copy()
     num_courses_csv = len(matched_df)
@@ -283,9 +277,7 @@ def aggregate_for_row(
 
     if gpas:
         gpa_value: Optional[float] = sum(gpas) / len(gpas)
-        gpa_std: Optional[float] = (
-            statistics.pstdev(gpas) if len(gpas) > 1 else 0.0
-        )
+        gpa_std: Optional[float] = statistics.pstdev(gpas) if len(gpas) > 1 else 0.0
     else:
         gpa_value = None
         gpa_std = None
@@ -313,9 +305,7 @@ def aggregate_for_row(
 
         if total_grades > 0:
             for g in GRADE_COLS:
-                grade_percentages[g] = (
-                    float(grade_counts[g]) / total_grades
-                )
+                grade_percentages[g] = float(grade_counts[g]) / total_grades
 
             def percentile_grade(q: float) -> Optional[str]:
                 # q in [0,1]
@@ -326,9 +316,9 @@ def aggregate_for_row(
                     if cumulative >= threshold:
                         return grade
                 return None
-            
+
             # caveat: i dont know why q1 is 0.75 and why q3 is 0.25 and why it works
-            q1_grade = percentile_grade(0.75) 
+            q1_grade = percentile_grade(0.75)
             median_grade = percentile_grade(0.50)
             q3_grade = percentile_grade(0.25)
 
@@ -406,16 +396,13 @@ def aggregate_for_row(
 
     course_size_avg = (
         float(sum(json_course_sizes)) / len(json_course_sizes)
-        if json_course_sizes else None
+        if json_course_sizes
+        else None
     )
     num_responses = int(sum(json_responses)) if json_responses else None
     total_students = int(sum(json_course_sizes)) if json_course_sizes else None
-    avg_part1 = (
-        float(sum(json_avg1)) / len(json_avg1) if json_avg1 else None
-    )
-    avg_part2 = (
-        float(sum(json_avg2)) / len(json_avg2) if json_avg2 else None
-    )
+    avg_part1 = float(sum(json_avg1)) / len(json_avg1) if json_avg1 else None
+    avg_part2 = float(sum(json_avg2)) / len(json_avg2) if json_avg2 else None
 
     return {
         "aggregate_name": aggregate_name,
@@ -438,6 +425,7 @@ def aggregate_for_row(
         "num_courses_csv": num_courses_csv,
         "num_courses_json": num_courses_json,
     }
+
 
 def get_unique_courses(csv_path):
     """
@@ -479,17 +467,18 @@ def get_unique_courses(csv_path):
     # group by course and count unique instructors and class numbers
     result = (
         tmp.groupby(base_cols, as_index=False)
-           .agg(
-               **{
-                   "Unique Instructors": ("Instructor", lambda x: x[x != ""].nunique()),
-                   "Unique Class Sessions": ("Class Nbr", lambda x: x[x != ""].nunique()),
-               }
-           )
-           .sort_values(base_cols)
-           .reset_index(drop=True)
+        .agg(
+            **{
+                "Unique Instructors": ("Instructor", lambda x: x[x != ""].nunique()),
+                "Unique Class Sessions": ("Class Nbr", lambda x: x[x != ""].nunique()),
+            }
+        )
+        .sort_values(base_cols)
+        .reset_index(drop=True)
     )
 
     return result
+
 
 def get_courses_by_instructor(
     instructor_row: pd.Series,
@@ -518,24 +507,27 @@ def get_courses_by_instructor(
 
     # Match by instructor name
     if "Instructor" in instructor_row and instructor_row["Instructor"]:
-        mask &= (df["Instructor"] == instructor_row["Instructor"])
+        mask &= df["Instructor"] == instructor_row["Instructor"]
     else:
         # Fall back to matching by individual name components if available
         if "Instructor First" in instructor_row and instructor_row["Instructor First"]:
-            mask &= (df["Instructor First"] == instructor_row["Instructor First"])
+            mask &= df["Instructor First"] == instructor_row["Instructor First"]
         if "Instructor Last" in instructor_row and instructor_row["Instructor Last"]:
-            mask &= (df["Instructor Last"] == instructor_row["Instructor Last"])
+            mask &= df["Instructor Last"] == instructor_row["Instructor Last"]
 
     # Base filtered results
     result = df[mask].copy()
 
     # Optionally require that a JSON file exists for each course
     if require_json:
+
         def _has_json(row: pd.Series) -> bool:
             path = course_to_json_path(row)
             return bool(path) and os.path.exists(path)
 
         result = result[result.apply(_has_json, axis=1)].copy()
 
-    print(f"✅ Found {len(result)} courses for instructor: {instructor_row.get('Instructor', 'N/A')}")
+    print(
+        f"✅ Found {len(result)} courses for instructor: {instructor_row.get('Instructor', 'N/A')}"
+    )
     return result

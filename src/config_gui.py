@@ -8,21 +8,59 @@ from src.window_utils import enable_dpi_awareness, fit_window_to_screen
 
 # hard coded display names
 PRETTY_NAME_MAP = {
-    "include_LLM_insights": ("Include LLM summary?", "If this setting is enabled, an AI model with generate a short summary of student comments on each course scorecard. This may take a few minutes per scorecard."),
-    "debug_replace_LLM_with_placeholder": ("Use LLM placeholder?", "[Debug]\nReplaces AI-generated summaries with placeholder text instead of running the LLM model. Useful for testing scorecard generation without waiting for LLM inference."),
-    "generate_per_session_scorecards": ("Generate Per-Session Scorecards?", "When enabled, generates an individual detailed scorecard PDF for each selected course session in addition to the instructor overview scorecard.\n(Default: False)"),
-    "overwrite_csv": ("Overwrite CSV?", "[Advanced]\nOverwrites internal CSV files created from Excel sheets.\n(Recommended: True)"),
-    "overwrite_json": ("Overwrite JSON?", "[Advanced]\nOverwrites internal JSON files created from Excel sheets.\n(Warning: This will clear any existing LLM summaries)"),
-    "overwrite_llm_summary": ("Overwrite LLM Summary?", "[Advanced]\nWhen enabled, regenerates AI summaries even if one already exists in the JSON file. Disable to reuse summaries from prior runs.\n(Recommended: False)"),
-    "pdf_source": ("PDF Source", "The folder where all Course Evaluation PDF files are located."),
+    "include_LLM_insights": (
+        "Include LLM summary?",
+        "If this setting is enabled, an AI model with generate a short summary of student comments on each course scorecard. This may take a few minutes per scorecard.",
+    ),
+    "debug_replace_LLM_with_placeholder": (
+        "Use LLM placeholder?",
+        "[Debug]\nReplaces AI-generated summaries with placeholder text instead of running the LLM model. Useful for testing scorecard generation without waiting for LLM inference.",
+    ),
+    "generate_per_session_scorecards": (
+        "Generate Per-Session Scorecards?",
+        "When enabled, generates an individual detailed scorecard PDF for each selected course session in addition to the instructor overview scorecard.\n(Default: False)",
+    ),
+    "overwrite_csv": (
+        "Overwrite CSV?",
+        "[Advanced]\nOverwrites internal CSV files created from Excel sheets.\n(Recommended: True)",
+    ),
+    "overwrite_json": (
+        "Overwrite JSON?",
+        "[Advanced]\nOverwrites internal JSON files created from Excel sheets.\n(Warning: This will clear any existing LLM summaries)",
+    ),
+    "overwrite_llm_summary": (
+        "Overwrite LLM Summary?",
+        "[Advanced]\nWhen enabled, regenerates AI summaries even if one already exists in the JSON file. Disable to reuse summaries from prior runs.\n(Recommended: False)",
+    ),
+    "pdf_source": (
+        "PDF Source",
+        "The folder where all Course Evaluation PDF files are located.",
+    ),
     "excel_source": ("Excel Source", "The course history Excel file."),
-    "scorecard_dir": ("Scorecard Directory", "The desired folder for finished scorecard PDFs."),
-    "gguf_path": (".gguf file Source", "The .gguf file used for AI generated summaries."),
-
-    "match_term": ("Match Term?", "Courses will only be compared against other courses of the same term. (Fall/Spring/Summer)\n(Recommended: True)"),
-    "match_year": ("Match Year?", "Courses will only be compared against other courses of the same calendar year.\n(Recommended: True)"),
-    "match_subject": ("Match Subject?", "Courses will only be compared against other courses of the same subject. (CSE, IEE, SER, etc.)\n(Recommended: True)"),
-    "match_catalog_number": ("Match Catalog Number?", "Courses will only be compared against other courses of the same catalog number. \nIf the \"hundred\" option is selected, all courses in the same x00-x99 range will be compared to each other. (100-199, 200-299, 300-399, etc.)\n(Recommended: Hundred)"),
+    "scorecard_dir": (
+        "Scorecard Directory",
+        "The desired folder for finished scorecard PDFs.",
+    ),
+    "gguf_path": (
+        ".gguf file Source",
+        "The .gguf file used for AI generated summaries.",
+    ),
+    "match_term": (
+        "Match Term?",
+        "Courses will only be compared against other courses of the same term. (Fall/Spring/Summer)\n(Recommended: True)",
+    ),
+    "match_year": (
+        "Match Year?",
+        "Courses will only be compared against other courses of the same calendar year.\n(Recommended: True)",
+    ),
+    "match_subject": (
+        "Match Subject?",
+        "Courses will only be compared against other courses of the same subject. (CSE, IEE, SER, etc.)\n(Recommended: True)",
+    ),
+    "match_catalog_number": (
+        "Match Catalog Number?",
+        'Courses will only be compared against other courses of the same catalog number. \nIf the "hundred" option is selected, all courses in the same x00-x99 range will be compared to each other. (100-199, 200-299, 300-399, etc.)\n(Recommended: Hundred)',
+    ),
 }
 
 # keys shown in the GUI (all others are hidden) and their display order
@@ -43,6 +81,7 @@ SHOWN_KEYS = [
     "overwrite_llm_summary",
 ]
 
+
 def _looks_like_path(key: str, value) -> bool:
     if not isinstance(value, str):
         return (
@@ -56,6 +95,7 @@ def _looks_like_path(key: str, value) -> bool:
         return True
     return ("/" in value or os.sep in value) or bool(os.path.splitext(value)[1])
 
+
 def _prefer_directory_chooser(key: str, value) -> bool:
     k = key.lower()
     if "dir" in k:
@@ -64,6 +104,7 @@ def _prefer_directory_chooser(key: str, value) -> bool:
         return False
     root, ext = os.path.splitext(value)
     return ext == ""
+
 
 def open_config_editor(json_path: str) -> None:
     # load
@@ -93,9 +134,11 @@ def open_config_editor(json_path: str) -> None:
         if desc_text:
             desc_label = ttk.Label(row, text=desc_text, anchor="w", justify="left")
             desc_label.pack(fill="x")
+
             # Dynamically wrap text to fit the available row width
             def _update_wrap(event, lbl=desc_label):
                 lbl.configure(wraplength=max(event.width - 20, 100))
+
             row.bind("<Configure>", _update_wrap)
 
         # line that contains label + control
@@ -160,7 +203,6 @@ def open_config_editor(json_path: str) -> None:
             ent.pack(side="left", fill="x", expand=True)
             fields[(section_name, key)] = {"var": var, "type": "str"}
 
-
     # main scrollable area (single page, no tabs)
     frame = ttk.Frame(root)
     canvas = tk.Canvas(frame)
@@ -177,6 +219,7 @@ def open_config_editor(json_path: str) -> None:
     # Keep the inner frame width in sync with the canvas so children fill horizontally
     def _sync_inner_width(event, c=canvas):
         c.itemconfigure("all", width=event.width)
+
     canvas.bind("<Configure>", _sync_inner_width)
 
     canvas.pack(side="left", fill="both", expand=True)
@@ -234,9 +277,7 @@ def open_config_editor(json_path: str) -> None:
         text="Save and Continue",
         style="Accent.TButton",
         command=save_and_continue,
-    ).pack(
-        side="right", padx=4
-    )
+    ).pack(side="right", padx=4)
     ttk.Button(btn_bar, text="Continue Without Saving", command=close_editor).pack(
         side="right", padx=4
     )
@@ -244,6 +285,7 @@ def open_config_editor(json_path: str) -> None:
     root.protocol("WM_DELETE_WINDOW", close_editor)
 
     root.mainloop()
+
 
 def _label_and_description_for_key(key: str) -> tuple[str, str]:
     if key in PRETTY_NAME_MAP:

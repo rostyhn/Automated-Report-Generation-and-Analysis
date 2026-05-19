@@ -28,13 +28,33 @@ from .data_handler import aggregate_for_row
 
 # Ordered grade list for ordinal delta computation
 _GRADE_ORDINAL = [
-    "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "D", "E",
-    "EN", "EU", "I", "NR", "NR.1", "W", "X", "XE", "Y", "Z",
+    "A+",
+    "A",
+    "A-",
+    "B+",
+    "B",
+    "B-",
+    "C+",
+    "C",
+    "D",
+    "E",
+    "EN",
+    "EU",
+    "I",
+    "NR",
+    "NR.1",
+    "W",
+    "X",
+    "XE",
+    "Y",
+    "Z",
 ]
 _GRADE_TO_ORD = {g: i for i, g in enumerate(_GRADE_ORDINAL)}
 
 
-def _grade_ordinal_delta(individual_grade: Optional[str], baseline_grade: Optional[str]) -> str:
+def _grade_ordinal_delta(
+    individual_grade: Optional[str], baseline_grade: Optional[str]
+) -> str:
     """Ordinal step difference between two letter grades (positive = higher grade)."""
     if not individual_grade or not baseline_grade:
         return "0"
@@ -205,6 +225,7 @@ class _InstructorConsolidatedDoc:
         avg1 = avg2 = overall = None
         resp_rate_str = "N/A"
         resp_count = 0
+        # so AI summary gets loaded from the JSON if present... what is this JSON?
         ai_summary = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc ultrices non urna et auctor. Nunc est sem, accumsan eget venenatis in, molestie quis turpis. Fusce eu justo et nisi vulputate vehicula. Donec viverra velit eros. In blandit, neque ut consectetur condimentum, lorem nibh lobortis justo, id tristique ipsum metus vel lorem. Aenean auctor elementum odio sed semper. Praesent ac augue sit amet odio condimentum condimentum. Donec egestas dui eleifend, aliquet nunc vel, rutrum nunc. Mauris vulputate dui quis metus luctus, nec semper nulla aliquet. Etiam imperdiet felis non lectus tempus hendrerit. Sed tincidunt turpis vel lacus gravida, eget sagittis est tempor. Nam metus dui, tempus id iaculis et, malesuada sed quam. Sed sed mauris sed magna vulputate semper. In sit amet leo tempus, feugiat leo et, tincidunt turpis."
 
         if has_eval:
@@ -293,7 +314,9 @@ class _InstructorConsolidatedDoc:
                 return g
         return None
 
-    def _compute_instructor_agg(self, per_course: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _compute_instructor_agg(
+        self, per_course: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """Compute instructor-level aggregate metrics from per-course data."""
         if not per_course:
             return {}
@@ -312,7 +335,9 @@ class _InstructorConsolidatedDoc:
 
         avg_avg1 = _mean([c["avg1"] for c in courses_with_eval])
         avg_avg2 = _mean([c["avg2"] for c in courses_with_eval])
-        avg_overall = round((avg_avg1 + avg_avg2) / 2, 2) if avg_avg1 and avg_avg2 else None
+        avg_overall = (
+            round((avg_avg1 + avg_avg2) / 2, 2) if avg_avg1 and avg_avg2 else None
+        )
         avg_gpa = _mean([c["gpa"] for c in all_courses])
 
         # Response rate
@@ -327,7 +352,9 @@ class _InstructorConsolidatedDoc:
                 resp_rates.append(rr_val)
             except (ValueError, TypeError):
                 continue
-        avg_resp_rate = round(sum(resp_rates) / len(resp_rates), 0) if resp_rates else None
+        avg_resp_rate = (
+            round(sum(resp_rates) / len(resp_rates), 0) if resp_rates else None
+        )
 
         # Aggregate quartiles from combined grade distribution
         combined_grades = {g: 0 for g in GRADE_COLS}
@@ -373,14 +400,20 @@ class _InstructorConsolidatedDoc:
         bl_gpas = [_safe_float(c["agg_data"].get("gpa")) for c in all_courses]
         bl_gpa = _mean(bl_gpas)
 
-        bl_avg1s = [_safe_float(c["agg_data"].get("avg_part1")) for c in courses_with_eval]
-        bl_avg2s = [_safe_float(c["agg_data"].get("avg_part2")) for c in courses_with_eval]
+        bl_avg1s = [
+            _safe_float(c["agg_data"].get("avg_part1")) for c in courses_with_eval
+        ]
+        bl_avg2s = [
+            _safe_float(c["agg_data"].get("avg_part2")) for c in courses_with_eval
+        ]
         bl_avg1 = _mean(bl_avg1s)
         bl_avg2 = _mean(bl_avg2s)
         bl_overall = round((bl_avg1 + bl_avg2) / 2, 2) if bl_avg1 and bl_avg2 else None
 
         bl_q1 = all_courses[0]["agg_data"].get("q1_grade") if all_courses else None
-        bl_median = all_courses[0]["agg_data"].get("median_grade") if all_courses else None
+        bl_median = (
+            all_courses[0]["agg_data"].get("median_grade") if all_courses else None
+        )
         bl_q3 = all_courses[0]["agg_data"].get("q3_grade") if all_courses else None
 
         bl_grade_pcts = {}
@@ -422,11 +455,15 @@ class _InstructorConsolidatedDoc:
             "median_delta": _grade_ordinal_delta(agg_median, bl_median),
             "q3": agg_q3 or "N/A",
             "q3_delta": _grade_ordinal_delta(agg_q3, bl_q3),
-            "resp_rate": f"{int(avg_resp_rate)}\\%" if avg_resp_rate is not None else "N/A",
+            "resp_rate": f"{int(avg_resp_rate)}\\%"
+            if avg_resp_rate is not None
+            else "N/A",
             "resp_delta": "N/A",
             "grade_pcts": grade_pcts,
             "grade_deltas": {
-                letter: _delta_pct_str(grade_pcts[letter], bl_grade_pcts.get(letter, 0.0))
+                letter: _delta_pct_str(
+                    grade_pcts[letter], bl_grade_pcts.get(letter, 0.0)
+                )
                 for letter in grade_pcts
             },
         }
@@ -511,14 +548,21 @@ class _InstructorConsolidatedDoc:
             x = cm["gpa"]
 
             if any(v is None for v in [gpa_min, gpa_q1, gpa_med, gpa_q3, gpa_max]):
-                print(f"    ⚠️ Insufficient aggregate GPA data for boxplot {prefix} ({cm['name']}). Skipping.")
+                print(
+                    f"    ⚠️ Insufficient aggregate GPA data for boxplot {prefix} ({cm['name']}). Skipping."
+                )
                 continue
 
             filename = f"boxplot_{stem}_{prefix}.png"
             path = os.path.join(output_dir, filename)
             create_gpa_sparkline(
-                min=gpa_min, q1=gpa_q1, median=gpa_med,
-                q3=gpa_q3, max=gpa_max, x=x, path=path,
+                min=gpa_min,
+                q1=gpa_q1,
+                median=gpa_med,
+                q3=gpa_q3,
+                max=gpa_max,
+                x=x,
+                path=path,
             )
             print(f"    ✅ Generated boxplot: {filename}")
 
@@ -556,7 +600,9 @@ class _InstructorConsolidatedDoc:
             if result:
                 print(f"    ✅ Generated histogram: {filename}")
             else:
-                print(f"    ⚠️ Failed to generate histogram for {cm['name']} ({prefix}). Skipping.")
+                print(
+                    f"    ⚠️ Failed to generate histogram for {cm['name']} ({prefix}). Skipping."
+                )
 
     # ------------------------------------------------------------------ #
     #  Course history overlay generation (per course group)
@@ -595,7 +641,9 @@ class _InstructorConsolidatedDoc:
             if result:
                 print(f"    ✅ Generated course history overlay: {filename}")
             else:
-                print(f"    ⚠️ Failed to generate overlay for {group_key} ({prefix}). Skipping.")
+                print(
+                    f"    ⚠️ Failed to generate overlay for {group_key} ({prefix}). Skipping."
+                )
 
     # ------------------------------------------------------------------ #
     #  Document generation
@@ -726,10 +774,15 @@ class _InstructorConsolidatedDoc:
             prefix = self.PREFIXES[i]
 
             def cmd(suffix, val, _prefix=prefix):
-                p.append(Command("newcommand", [
-                    NoEscape(rf"\Course{_prefix}{suffix}"),
-                    NoEscape(str(val)),
-                ]))
+                p.append(
+                    Command(
+                        "newcommand",
+                        [
+                            NoEscape(rf"\Course{_prefix}{suffix}"),
+                            NoEscape(str(val)),
+                        ],
+                    )
+                )
 
             cmd("Name", cm["name"])
             cmd("Term", cm["term"])
@@ -789,3 +842,4 @@ class _InstructorConsolidatedDoc:
                 d.append(NoEscape(rf"\courserow{{{prefix}}}%"))
 
         d.append(NoEscape(instructor_consolidated_tex.get_per_course_table_footer()))
+

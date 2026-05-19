@@ -61,9 +61,7 @@ class SetupWizard:
 
         # Title
         title = ttk.Label(
-            frame,
-            text="Welcome to ASU Scorecard Generator",
-            font=('Arial', 16, 'bold')
+            frame, text="Welcome to ASU Scorecard Generator", font=("Arial", 16, "bold")
         )
         title.pack(pady=20)
 
@@ -81,7 +79,7 @@ class SetupWizard:
                 "You can skip components if needed."
             ),
             justify=tk.LEFT,
-            wraplength=600
+            wraplength=600,
         )
         desc.pack(pady=20)
 
@@ -93,7 +91,7 @@ class SetupWizard:
             btn_frame,
             text="Continue",
             style="Accent.TButton",
-            command=lambda: self.show_page(1)
+            command=lambda: self.show_page(1),
         )
         continue_btn.pack()
 
@@ -104,11 +102,7 @@ class SetupWizard:
         frame = ttk.Frame(self.root, padding=20)
 
         # Title
-        title = ttk.Label(
-            frame,
-            text="LLM Model Setup",
-            font=('Arial', 14, 'bold')
-        )
+        title = ttk.Label(frame, text="LLM Model Setup", font=("Arial", 14, "bold"))
         title.pack(pady=10)
 
         # Description
@@ -119,7 +113,7 @@ class SetupWizard:
                 "insights from course evaluation comments.\n\n"
                 "Choose how you want to set up the model:"
             ),
-            justify=tk.LEFT
+            justify=tk.LEFT,
         )
         desc.pack(pady=10)
 
@@ -131,30 +125,31 @@ class SetupWizard:
             radio_frame,
             text="Download model automatically (Recommended, ~5GB)",
             variable=self.model_choice,
-            value="download"
+            value="download",
         ).pack(anchor=tk.W, pady=5)
 
         ttk.Radiobutton(
             radio_frame,
             text="I already have a model file",
             variable=self.model_choice,
-            value="manual"
+            value="manual",
         ).pack(anchor=tk.W, pady=5)
 
         ttk.Radiobutton(
             radio_frame,
             text="Skip model setup (can add later)",
             variable=self.model_choice,
-            value="skip"
+            value="skip",
         ).pack(anchor=tk.W, pady=5)
 
         # Model URL input (for download option)
-        url_frame = ttk.LabelFrame(frame, text="Model Download URL (optional)", padding=10)
+        url_frame = ttk.LabelFrame(
+            frame, text="Model Download URL (optional)", padding=10
+        )
         url_frame.pack(pady=10, fill=tk.X)
 
         ttk.Label(
-            url_frame,
-            text="If you have a specific model URL, enter it below:"
+            url_frame, text="If you have a specific model URL, enter it below:"
         ).pack(anchor=tk.W)
 
         url_entry = ttk.Entry(url_frame, textvariable=self.model_url, width=60)
@@ -164,17 +159,15 @@ class SetupWizard:
         btn_frame = ttk.Frame(frame)
         btn_frame.pack(pady=20)
 
-        ttk.Button(
-            btn_frame,
-            text="Back",
-            command=lambda: self.show_page(0)
-        ).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Back", command=lambda: self.show_page(0)).pack(
+            side=tk.LEFT, padx=5
+        )
 
         ttk.Button(
             btn_frame,
             text="Continue",
             style="Accent.TButton",
-            command=self.process_model_choice
+            command=self.process_model_choice,
         ).pack(side=tk.LEFT, padx=5)
 
         self.pages.append(frame)
@@ -184,43 +177,26 @@ class SetupWizard:
         frame = ttk.Frame(self.root, padding=20)
 
         # Title
-        title = ttk.Label(
-            frame,
-            text="Downloading Model",
-            font=('Arial', 14, 'bold')
-        )
+        title = ttk.Label(frame, text="Downloading Model", font=("Arial", 14, "bold"))
         title.pack(pady=10)
 
         # Status label
         self.download_status = ttk.Label(
-            frame,
-            text="Preparing download...",
-            justify=tk.CENTER
+            frame, text="Preparing download...", justify=tk.CENTER
         )
         self.download_status.pack(pady=10)
 
         # Progress bar
-        self.download_progress = ttk.Progressbar(
-            frame,
-            length=600,
-            mode='determinate'
-        )
+        self.download_progress = ttk.Progressbar(frame, length=600, mode="determinate")
         self.download_progress.pack(pady=20)
 
         # Progress text
-        self.download_text = ttk.Label(
-            frame,
-            text="0 MB / 0 MB",
-            justify=tk.CENTER
-        )
+        self.download_text = ttk.Label(frame, text="0 MB / 0 MB", justify=tk.CENTER)
         self.download_text.pack(pady=5)
 
         # Continue button (disabled until download complete)
         self.download_continue_btn = ttk.Button(
-            frame,
-            text="Continue",
-            command=self.on_download_continue,
-            state=tk.DISABLED
+            frame, text="Continue", command=self.on_download_continue, state=tk.DISABLED
         )
         self.download_continue_btn.pack(pady=20)
 
@@ -231,27 +207,17 @@ class SetupWizard:
         frame = ttk.Frame(self.root, padding=20)
 
         # Title
-        title = ttk.Label(
-            frame,
-            text="Installing LaTeX",
-            font=('Arial', 14, 'bold')
-        )
+        title = ttk.Label(frame, text="Installing LaTeX", font=("Arial", 14, "bold"))
         title.pack(pady=10)
 
         # Status label
         self.latex_status = ttk.Label(
-            frame,
-            text="Preparing installation...",
-            justify=tk.CENTER
+            frame, text="Preparing installation...", justify=tk.CENTER
         )
         self.latex_status.pack(pady=10)
 
         # Progress bar (indeterminate for LaTeX install)
-        self.latex_progress = ttk.Progressbar(
-            frame,
-            length=600,
-            mode='indeterminate'
-        )
+        self.latex_progress = ttk.Progressbar(frame, length=600, mode="indeterminate")
         self.latex_progress.pack(pady=20)
 
         # Log text
@@ -273,7 +239,7 @@ class SetupWizard:
             text="Continue",
             style="Accent.TButton",
             command=lambda: self.show_page(4),
-            state=tk.DISABLED
+            state=tk.DISABLED,
         )
         self.latex_continue_btn.pack(pady=20)
 
@@ -287,17 +253,14 @@ class SetupWizard:
         title = ttk.Label(
             frame,
             text="Setup Complete!",
-            font=('Arial', 16, 'bold'),
-            foreground='green'
+            font=("Arial", 16, "bold"),
+            foreground="green",
         )
         title.pack(pady=20)
 
         # Summary
         self.completion_summary = ttk.Label(
-            frame,
-            text="",
-            justify=tk.LEFT,
-            wraplength=600
+            frame, text="", justify=tk.LEFT, wraplength=600
         )
         self.completion_summary.pack(pady=20)
 
@@ -306,7 +269,7 @@ class SetupWizard:
             frame,
             text="Finish and Launch Application",
             style="Accent.TButton",
-            command=self.finish_setup
+            command=self.finish_setup,
         )
         finish_btn.pack(pady=20)
 
@@ -316,11 +279,11 @@ class SetupWizard:
         """Handle window close — offer to exit the application."""
         if messagebox.askyesno(
             "Cancel Setup",
-            "Setup has not been completed.\n\n"
-            "Cancel setup and exit the application?"
+            "Setup has not been completed.\n\nCancel setup and exit the application?",
         ):
             self.root.destroy()
             import sys
+
             sys.exit(0)
 
     def show_page(self, page_num):
@@ -346,7 +309,7 @@ class SetupWizard:
             # Ask for model path
             path = filedialog.askopenfilename(
                 title="Select GGUF Model File",
-                filetypes=[("GGUF Files", "*.gguf"), ("All Files", "*.*")]
+                filetypes=[("GGUF Files", "*.gguf"), ("All Files", "*.*")],
             )
             if path:
                 self.manual_model_path.set(path)
@@ -357,26 +320,29 @@ class SetupWizard:
                         "Model Selected",
                         f"Model path set to:\n{path}\n\n"
                         f"Configuration updated successfully.\n\n"
-                        f"Proceeding to LaTeX installation."
+                        f"Proceeding to LaTeX installation.",
                     )
                 else:
                     messagebox.showwarning(
                         "Configuration Update Failed",
                         f"Model path selected but config update failed.\n"
                         f"You may need to manually update the config later.\n\n"
-                        f"Proceeding to LaTeX installation."
+                        f"Proceeding to LaTeX installation.",
                     )
 
                 self.show_page(3)
                 self.start_latex_install()
             else:
-                messagebox.showwarning("No Model Selected", "Please select a model file or choose a different option.")
+                messagebox.showwarning(
+                    "No Model Selected",
+                    "Please select a model file or choose a different option.",
+                )
         elif choice == "skip":
             # Skip model, go to LaTeX
             messagebox.showinfo(
                 "Model Skipped",
                 "Model setup skipped. You can add a model later by placing a GGUF file at:\n"
-                f"{self.setup.model_path}"
+                f"{self.setup.model_path}",
             )
             self.show_page(3)
             self.start_latex_install()
@@ -391,16 +357,23 @@ class SetupWizard:
             messagebox.showinfo(
                 "Using Default Model",
                 f"No URL provided. Using default model:\n{DEFAULT_MODEL_NAME}\n\n"
-                f"This is Meta-Llama-3.1-8B-Instruct (Q4_K_M quantization, ~5GB)."
+                f"This is Meta-Llama-3.1-8B-Instruct (Q4_K_M quantization, ~5GB).",
             )
 
         def download_thread():
             def progress_callback(current, total):
                 # Update UI from download thread
                 progress_percent = (current / total * 100) if total > 0 else 0
-                self.root.after(0, lambda: self.update_download_progress(current, total, progress_percent))
+                self.root.after(
+                    0,
+                    lambda: self.update_download_progress(
+                        current, total, progress_percent
+                    ),
+                )
 
-            success = self.setup.download_model(url, progress_callback=progress_callback)
+            success = self.setup.download_model(
+                url, progress_callback=progress_callback
+            )
 
             # Update UI on completion
             self.root.after(0, lambda: self.on_download_complete(success))
@@ -413,10 +386,12 @@ class SetupWizard:
 
     def update_download_progress(self, current, total, percent):
         """Update download progress bar and text."""
-        self.download_progress['value'] = percent
+        self.download_progress["value"] = percent
         current_mb = current / (1024 * 1024)
         total_mb = total / (1024 * 1024)
-        self.download_text.config(text=f"{current_mb:.1f} MB / {total_mb:.1f} MB ({percent:.1f}%)")
+        self.download_text.config(
+            text=f"{current_mb:.1f} MB / {total_mb:.1f} MB ({percent:.1f}%)"
+        )
 
     def on_download_complete(self, success):
         """Handle download completion."""
@@ -430,7 +405,7 @@ class SetupWizard:
             self.download_status.config(text="\u274c Download failed")
             messagebox.showerror(
                 "Download Failed",
-                "Model download failed. You can try again later or add a model manually."
+                "Model download failed. You can try again later or add a model manually.",
             )
             self.download_continue_btn.config(state=tk.NORMAL)
 
@@ -441,9 +416,12 @@ class SetupWizard:
 
     def start_latex_install(self):
         """Start LaTeX installation in background thread."""
+
         def install_thread():
             self.root.after(0, lambda: self.latex_progress.start())
-            self.root.after(0, lambda: self.add_latex_log("Starting TinyTeX installation...\n"))
+            self.root.after(
+                0, lambda: self.add_latex_log("Starting TinyTeX installation...\n")
+            )
 
             # Define callback to update GUI with installation progress
             def log_callback(message):
@@ -480,7 +458,7 @@ class SetupWizard:
             self.latex_continue_btn.config(style="Accent.TButton", state=tk.NORMAL)
             messagebox.showwarning(
                 "Installation Warning",
-                "LaTeX installation had some issues. You may need to install LaTeX manually."
+                "LaTeX installation had some issues. You may need to install LaTeX manually.",
             )
 
     def finish_setup(self):

@@ -3,6 +3,7 @@ import json
 import pandas as pd
 from src.utils import course_to_json_path, _safe_int, _safe_float
 
+
 def enrich_csv_with_evals(csv_path: str, json_dir: str, config: dict) -> None:
     """
     For every row in the CSV, check if a corresponding JSON (evaluation) file exists
@@ -34,21 +35,41 @@ def enrich_csv_with_evals(csv_path: str, json_dir: str, config: dict) -> None:
                 with open(json_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
             except Exception:
-                _append_empty(has_eval, response_counts, response_rates, avg1_vals, avg2_vals, overall_vals)
+                _append_empty(
+                    has_eval,
+                    response_counts,
+                    response_rates,
+                    avg1_vals,
+                    avg2_vals,
+                    overall_vals,
+                )
                 continue
 
             info = data.get("eval_info", {})
 
             has_eval.append(True)
             response_counts.append(_safe_int(info.get("response_count")))
-            response_rates.append(_parse_rate(info.get("response_rate"), info.get("response_count"), info.get("total_students")))
+            response_rates.append(
+                _parse_rate(
+                    info.get("response_rate"),
+                    info.get("response_count"),
+                    info.get("total_students"),
+                )
+            )
             a1 = _safe_float(info.get("avg1"))
             a2 = _safe_float(info.get("avg2"))
             avg1_vals.append(a1)
             avg2_vals.append(a2)
             overall_vals.append(_compute_overall(a1, a2))
         else:
-            _append_empty(has_eval, response_counts, response_rates, avg1_vals, avg2_vals, overall_vals)
+            _append_empty(
+                has_eval,
+                response_counts,
+                response_rates,
+                avg1_vals,
+                avg2_vals,
+                overall_vals,
+            )
 
     # insert new columns at the end
     df["Has Evaluation"] = has_eval
@@ -60,10 +81,16 @@ def enrich_csv_with_evals(csv_path: str, json_dir: str, config: dict) -> None:
 
     df.to_csv(csv_path, index=False)
 
+    # why not save this?
     eval_count = sum(1 for v in has_eval if v)
-    print(f"  ✅ Enriched CSV with evaluation data. {eval_count} of {len(df)} rows have evaluations.")
+    print(
+        f"  ✅ Enriched CSV with evaluation data. {eval_count} of {len(df)} rows have evaluations."
+    )
 
-def _append_empty(has_eval, response_counts, response_rates, avg1_vals, avg2_vals, overall_vals):
+
+def _append_empty(
+    has_eval, response_counts, response_rates, avg1_vals, avg2_vals, overall_vals
+):
     """Append None/False for a row with no matching JSON."""
     has_eval.append(False)
     response_counts.append(None)
@@ -71,6 +98,7 @@ def _append_empty(has_eval, response_counts, response_rates, avg1_vals, avg2_val
     avg1_vals.append(None)
     avg2_vals.append(None)
     overall_vals.append(None)
+
 
 def _parse_rate(rate_str, response_count, total_students) -> float | None:
     """
@@ -92,6 +120,7 @@ def _parse_rate(rate_str, response_count, total_students) -> float | None:
         return round(rc / ts, 4)
 
     return None
+
 
 def _compute_overall(avg1: float | None, avg2: float | None) -> float | None:
     """Average of avg1 and avg2. If only one exists, return that one."""

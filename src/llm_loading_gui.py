@@ -4,6 +4,7 @@ from src.theme import apply_theme
 from src.window_utils import enable_dpi_awareness, fit_window_to_screen
 import threading
 
+
 class LLMLoadingGUI:
     def __init__(self, selected_courses_count: int, selected_instructors_count: int):
         self.selected_courses_count = selected_courses_count
@@ -14,7 +15,9 @@ class LLMLoadingGUI:
         # Parameters for LLM processing (set via run_processing)
         self.llm_params = None
 
-    def show(self, gguf_path=None, selected_scorecard_courses=None, llm_dir=None, config=None):
+    def show(
+        self, gguf_path=None, selected_scorecard_courses=None, llm_dir=None, config=None
+    ):
         """
         Show the loading GUI and wait for completion.
 
@@ -36,9 +39,12 @@ class LLMLoadingGUI:
 
         # If parameters provided, start processing immediately after GUI shows
         if gguf_path is not None:
-            self.window.after(100, lambda: self.run_processing(
-                gguf_path, selected_scorecard_courses, llm_dir, config
-            ))
+            self.window.after(
+                100,
+                lambda: self.run_processing(
+                    gguf_path, selected_scorecard_courses, llm_dir, config
+                ),
+            )
 
         self.window.mainloop()
 
@@ -56,16 +62,14 @@ class LLMLoadingGUI:
             text="Continue",
             command=self.on_complete,
             style="Accent.TButton",
-            state=tk.DISABLED
+            state=tk.DISABLED,
         )
         self.continue_btn.pack()
 
         # --- Top content ---
         # Title
         title = ttk.Label(
-            frame,
-            text="Generating LLM Insights",
-            font=('Arial', 14, 'bold')
+            frame, text="Generating LLM Insights", font=("Arial", 14, "bold")
         )
         title.pack(pady=10)
 
@@ -73,31 +77,27 @@ class LLMLoadingGUI:
         desc = ttk.Label(
             frame,
             text=f"Processing {self.selected_courses_count} courses and {self.selected_instructors_count} instructors...",
-            justify=tk.CENTER
+            justify=tk.CENTER,
         )
         desc.pack(pady=10)
 
         # Status label
         self.llm_status = ttk.Label(
-            frame,
-            text="Waiting to start...",
-            justify=tk.CENTER
+            frame, text="Waiting to start...", justify=tk.CENTER
         )
         self.llm_status.pack(pady=10)
 
         # Progress bar
-        self.llm_progress = ttk.Progressbar(
-            frame,
-            length=600,
-            mode='indeterminate'
-        )
+        self.llm_progress = ttk.Progressbar(frame, length=600, mode="indeterminate")
         self.llm_progress.pack(pady=20)
 
         # Log area (fills remaining space between progress bar and button)
         log_frame = ttk.LabelFrame(frame, text="LLM Processing Log", padding=10)
         log_frame.pack(pady=10, fill=tk.BOTH, expand=True)
 
-        self.llm_log = tk.Text(log_frame, height=12, width=70, state=tk.DISABLED, wrap=tk.WORD)
+        self.llm_log = tk.Text(
+            log_frame, height=12, width=70, state=tk.DISABLED, wrap=tk.WORD
+        )
         self.llm_log.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Scrollbar
@@ -116,10 +116,10 @@ class LLMLoadingGUI:
             config: Application config dict
         """
         self.llm_params = {
-            'gguf_path': gguf_path,
-            'selected_scorecard_courses': selected_scorecard_courses,
-            'llm_dir': llm_dir,
-            'config': config
+            "gguf_path": gguf_path,
+            "selected_scorecard_courses": selected_scorecard_courses,
+            "llm_dir": llm_dir,
+            "config": config,
         }
 
         self.is_running = True
@@ -135,13 +135,17 @@ class LLMLoadingGUI:
         try:
             from src import llm_io
 
-            # Run LLM with callback for logging
+            # need to select each specific session related to an instructor and process those first
+            # then aggregate into one summary across time
+
             llm_io.run_llm(
-                gguf_path=self.llm_params['gguf_path'],
-                selected_scorecard_courses=self.llm_params['selected_scorecard_courses'],
-                llm_dir=self.llm_params['llm_dir'],
-                config=self.llm_params['config'],
-                log_callback=self._log_from_thread
+                gguf_path=self.llm_params["gguf_path"],
+                selected_scorecard_courses=self.llm_params[
+                    "selected_scorecard_courses"
+                ],
+                llm_dir=self.llm_params["llm_dir"],
+                config=self.llm_params["config"],
+                log_callback=self._log_from_thread,
             )
 
             # Processing complete - enable continue button
@@ -159,9 +163,9 @@ class LLMLoadingGUI:
         self.window.after(0, lambda: self._update_status(final_message))
         self.window.after(0, lambda: self.llm_progress.stop())
         self.window.after(0, lambda: self.continue_btn.config(state=tk.NORMAL))
-        self._log_from_thread("\n" + "="*60)
+        self._log_from_thread("\n" + "=" * 60)
         self._log_from_thread("Processing complete! Click 'Continue' to proceed.")
-        self._log_from_thread("="*60)
+        self._log_from_thread("=" * 60)
 
     def _log_from_thread(self, message):
         """Thread-safe logging callback for llm_io.py"""
@@ -181,10 +185,11 @@ class LLMLoadingGUI:
     def _on_close_attempt(self):
         """Block window close while processing; allow after completion."""
         from tkinter import messagebox
+
         if self.is_running:
             messagebox.showwarning(
                 "Processing in Progress",
-                "LLM processing is still running.\nPlease wait for it to complete."
+                "LLM processing is still running.\nPlease wait for it to complete.",
             )
         else:
             self.on_complete()
@@ -194,3 +199,4 @@ class LLMLoadingGUI:
         self.is_running = False
         self.window.quit()
         self.window.destroy()
+

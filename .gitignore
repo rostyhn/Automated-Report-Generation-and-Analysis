@@ -11,6 +11,7 @@ venv
 .venv/
 *.python-version
 uv.lock
+data/ 
 
 # Project specific
 temporary_files/

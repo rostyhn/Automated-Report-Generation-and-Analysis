@@ -30,18 +30,22 @@ class FirstRunSetup:
         Args:
             config: Optional configuration dict with paths
         """
-        from src.resource_utils import get_resource_path, ensure_resources_dir, get_project_root
+        from src.resource_utils import (
+            get_resource_path,
+            ensure_resources_dir,
+            get_project_root,
+        )
 
         # Get project root and resources directory
         self.project_root = get_project_root()
         self.resources_dir = ensure_resources_dir()
 
         # Setup completion marker in resources directory
-        self.setup_complete_marker = self.resources_dir / '.setup_complete'
+        self.setup_complete_marker = self.resources_dir / ".setup_complete"
 
         # GGUF model path from config or default
-        if config and 'paths' in config and 'gguf_path' in config['paths']:
-            gguf_path_str = config['paths']['gguf_path']
+        if config and "paths" in config and "gguf_path" in config["paths"]:
+            gguf_path_str = config["paths"]["gguf_path"]
             # Convert relative path to absolute
             if not Path(gguf_path_str).is_absolute():
                 self.model_path = self.project_root / gguf_path_str
@@ -49,13 +53,15 @@ class FirstRunSetup:
                 self.model_path = Path(gguf_path_str)
         else:
             # Default fallback
-            self.model_path = self.project_root / 'configuration' / 'LLM' / DEFAULT_MODEL_NAME
+            self.model_path = (
+                self.project_root / "configuration" / "LLM" / DEFAULT_MODEL_NAME
+            )
 
         # Ensure model directory exists
         self.model_path.parent.mkdir(parents=True, exist_ok=True)
 
         # TinyTeX in resources directory
-        self.tinytex_dir = self.resources_dir / 'TinyTeX'
+        self.tinytex_dir = self.resources_dir / "TinyTeX"
         self.tinytex_dir.mkdir(parents=True, exist_ok=True)
 
     def is_first_run(self) -> bool:
@@ -73,10 +79,7 @@ class FirstRunSetup:
         print(f"✅ Setup marked as complete")
 
     def download_model(
-        self,
-        url: str,
-        expected_sha256: Optional[str] = None,
-        progress_callback=None
+        self, url: str, expected_sha256: Optional[str] = None, progress_callback=None
     ) -> bool:
         """
         Download GGUF model from URL with progress tracking.
@@ -97,20 +100,20 @@ class FirstRunSetup:
             response = requests.get(url, stream=True, timeout=30)
             response.raise_for_status()
 
-            total_size = int(response.headers.get('content-length', 0))
+            total_size = int(response.headers.get("content-length", 0))
 
             # Download with progress bar
-            with open(self.model_path, 'wb') as f:
+            with open(self.model_path, "wb") as f:
                 if total_size == 0:
                     # No content-length header
                     f.write(response.content)
                 else:
                     with tqdm(
                         total=total_size,
-                        unit='B',
+                        unit="B",
                         unit_scale=True,
                         unit_divisor=1024,
-                        desc="Downloading model"
+                        desc="Downloading model",
                     ) as pbar:
                         for chunk in response.iter_content(chunk_size=8192):
                             if chunk:
@@ -155,7 +158,7 @@ class FirstRunSetup:
             return False
 
         sha256 = hashlib.sha256()
-        with open(self.model_path, 'rb') as f:
+        with open(self.model_path, "rb") as f:
             while chunk := f.read(8192):
                 sha256.update(chunk)
 
@@ -181,11 +184,13 @@ class FirstRunSetup:
         Returns:
             True if installation successful, False otherwise
         """
+
         def log(message):
             """Helper to log to both console and callback."""
             print(message)
             if log_callback:
                 log_callback(message)
+
         import subprocess
         import urllib.request
         import zipfile
@@ -216,17 +221,20 @@ class FirstRunSetup:
             log(f"   Downloading from {installer_url}...")
             try:
                 with tqdm(
-                    unit='B',
+                    unit="B",
                     unit_scale=True,
                     unit_divisor=1024,
-                    desc="Downloading TinyTeX"
+                    desc="Downloading TinyTeX",
                 ) as pbar:
+
                     def report_progress(block_num, block_size, total_size):
                         if total_size > 0:
                             pbar.total = total_size
                             pbar.update(block_size)
 
-                    urllib.request.urlretrieve(installer_url, installer_file, reporthook=report_progress)
+                    urllib.request.urlretrieve(
+                        installer_url, installer_file, reporthook=report_progress
+                    )
             except Exception as e:
                 log(f"❌ Download failed: {e}")
                 return False
@@ -235,7 +243,7 @@ class FirstRunSetup:
             log("   Extracting TinyTeX...")
             try:
                 if system == "Windows":
-                    with zipfile.ZipFile(installer_file, 'r') as zip_ref:
+                    with zipfile.ZipFile(installer_file, "r") as zip_ref:
                         # Extract to parent, then rename to tinytex_dir
                         extract_path = self.tinytex_dir.parent
                         zip_ref.extractall(extract_path)
@@ -245,16 +253,18 @@ class FirstRunSetup:
                         if extracted_folder.exists():
                             if self.tinytex_dir.exists():
                                 import shutil
+
                                 shutil.rmtree(self.tinytex_dir)
                             extracted_folder.rename(self.tinytex_dir)
                 else:
-                    with tarfile.open(installer_file, 'r:gz') as tar_ref:
+                    with tarfile.open(installer_file, "r:gz") as tar_ref:
                         extract_path = self.tinytex_dir.parent
                         tar_ref.extractall(extract_path)
                         extracted_folder = extract_path / ".TinyTeX"
                         if extracted_folder.exists():
                             if self.tinytex_dir.exists():
                                 import shutil
+
                                 shutil.rmtree(self.tinytex_dir)
                             extracted_folder.rename(self.tinytex_dir)
             except Exception as e:
@@ -274,7 +284,7 @@ class FirstRunSetup:
 
             # Look for tlmgr in the TinyTeX installation we just created
             # Don't use get_latex_binary_path() as it may find system LaTeX
-            bin_dir = self.tinytex_dir / 'bin'
+            bin_dir = self.tinytex_dir / "bin"
             tlmgr_dir = None
 
             # Check if bin directory exists before trying to iterate
@@ -288,7 +298,9 @@ class FirstRunSetup:
             for subdir in bin_dir.iterdir():
                 if subdir.is_dir():
                     # Check if this directory contains pdflatex
-                    pdflatex_name = 'pdflatex.exe' if system == "Windows" else 'pdflatex'
+                    pdflatex_name = (
+                        "pdflatex.exe" if system == "Windows" else "pdflatex"
+                    )
                     if (subdir / pdflatex_name).exists():
                         tlmgr_dir = subdir
                         log(f"  Found TinyTeX binaries in: {tlmgr_dir}")
@@ -298,20 +310,20 @@ class FirstRunSetup:
                 # On Windows, tlmgr doesn't have a .bat extension in TinyTeX
                 if system == "Windows":
                     # Try tlmgr.bat first (some distributions), then tlmgr
-                    tlmgr_bin = tlmgr_dir / 'tlmgr.bat'
+                    tlmgr_bin = tlmgr_dir / "tlmgr.bat"
                     if not tlmgr_bin.exists():
-                        tlmgr_bin = tlmgr_dir / 'tlmgr'
+                        tlmgr_bin = tlmgr_dir / "tlmgr"
                 else:
-                    tlmgr_bin = tlmgr_dir / 'tlmgr'
+                    tlmgr_bin = tlmgr_dir / "tlmgr"
 
                 if tlmgr_bin.exists():
                     # Initialize tlmgr first (required for TinyTeX)
                     log("  Initializing TinyTeX package manager...")
 
                     # On Windows, we may need to use perl directly to run tlmgr
-                    if system == "Windows" and not str(tlmgr_bin).endswith('.bat'):
+                    if system == "Windows" and not str(tlmgr_bin).endswith(".bat"):
                         # Find perl in the same bin directory
-                        perl_bin = tlmgr_dir / 'perl.exe'
+                        perl_bin = tlmgr_dir / "perl.exe"
                         if perl_bin.exists():
                             # Run tlmgr via perl
                             tlmgr_cmd = [str(perl_bin), str(tlmgr_bin)]
@@ -327,13 +339,15 @@ class FirstRunSetup:
                     try:
                         # Update tlmgr itself
                         result = subprocess.run(
-                            tlmgr_cmd + ['update', '--self'],
+                            tlmgr_cmd + ["update", "--self"],
                             capture_output=True,
                             timeout=180,
-                            text=True
+                            text=True,
                         )
                         if result.returncode != 0:
-                            log(f"  ⚠️  Warning: tlmgr self-update failed: {result.stderr}")
+                            log(
+                                f"  ⚠️  Warning: tlmgr self-update failed: {result.stderr}"
+                            )
                     except Exception as e:
                         log(f"  ⚠️  Warning: Could not update tlmgr: {e}")
 
@@ -341,60 +355,70 @@ class FirstRunSetup:
                     try:
                         log("  Updating package database...")
                         result = subprocess.run(
-                            tlmgr_cmd + ['update', '--all'],
+                            tlmgr_cmd + ["update", "--all"],
                             capture_output=True,
                             timeout=180,
-                            text=True
+                            text=True,
                         )
-                        if result.returncode != 0 and "up to date" not in result.stdout.lower():
-                            log(f"  ⚠️  Warning: Package database update failed: {result.stderr}")
+                        if (
+                            result.returncode != 0
+                            and "up to date" not in result.stdout.lower()
+                        ):
+                            log(
+                                f"  ⚠️  Warning: Package database update failed: {result.stderr}"
+                            )
                     except Exception as e:
                         log(f"  ⚠️  Warning: Could not update package database: {e}")
 
                     required_packages = [
-                        'tcolorbox',
-                        'tools',        # Contains tabularx, array, calc
-                        'xcolor',
-                        'geometry',
-                        'graphics',     # Contains graphicx
-                        'booktabs',
-                        'pgf',
-                        'environ',
-                        'trimspaces',
-                        'etoolbox',
-                        'lastpage',
-                        'microtype',
-                        'tikzfill',
-                        'pdfcol',
-                        'listings',
-                        'listingsutf8',
-                        'xstring',
-                        'colortbl',
-                        'multirow',
-                        'ragged2e',
-                        'amsmath',
-                        'grfext',
-                        'ltablex',
-                        'xltabular',
+                        "tcolorbox",
+                        "tools",  # Contains tabularx, array, calc
+                        "xcolor",
+                        "geometry",
+                        "graphics",  # Contains graphicx
+                        "booktabs",
+                        "pgf",
+                        "environ",
+                        "trimspaces",
+                        "etoolbox",
+                        "lastpage",
+                        "microtype",
+                        "tikzfill",
+                        "pdfcol",
+                        "listings",
+                        "listingsutf8",
+                        "xstring",
+                        "colortbl",
+                        "multirow",
+                        "ragged2e",
+                        "amsmath",
+                        "grfext",
+                        "ltablex",
+                        "xltabular",
                     ]
 
                     for package in required_packages:
                         log(f"  Installing {package}...")
                         try:
                             result = subprocess.run(
-                                tlmgr_cmd + ['install', package],
+                                tlmgr_cmd + ["install", package],
                                 capture_output=True,
                                 timeout=120,
-                                text=True
+                                text=True,
                             )
                             if result.returncode == 0:
                                 log(f"    ✓ {package} installed")
                             else:
                                 # Check if already installed
-                                if "already installed" in result.stdout.lower() or "already installed" in result.stderr.lower():
+                                if (
+                                    "already installed" in result.stdout.lower()
+                                    or "already installed" in result.stderr.lower()
+                                ):
                                     log(f"    ✓ {package} already installed")
                                 else:
-                                    log(f"    ⚠️  {package} installation failed: {result.stderr.strip()}")
+                                    log(
+                                        f"    ⚠️  {package} installation failed: {result.stderr.strip()}"
+                                    )
                         except subprocess.TimeoutExpired:
                             log(f"    ⚠️  {package} installation timed out")
                         except Exception as e:
@@ -413,6 +437,7 @@ class FirstRunSetup:
             log(f"❌ TinyTeX installation failed: {e}")
             log("⚠️  You may need to install LaTeX manually")
             import traceback
+
             traceback.print_exc()
             return False
 
@@ -424,7 +449,7 @@ class FirstRunSetup:
             True if TinyTeX directory exists
         """
         # Check for bin directory which should contain pdflatex
-        bin_dir = self.tinytex_dir / 'bin'
+        bin_dir = self.tinytex_dir / "bin"
         return bin_dir.exists() and any(bin_dir.iterdir())
 
     def get_latex_binary_path(self) -> Optional[str]:
@@ -437,16 +462,17 @@ class FirstRunSetup:
         # Check in TinyTeX installation
         if self.tinytex_exists():
             # TinyTeX structure: TinyTeX/bin/x86_64-linux/pdflatex (or similar)
-            bin_dir = self.tinytex_dir / 'bin'
+            bin_dir = self.tinytex_dir / "bin"
             for subdir in bin_dir.iterdir():
                 if subdir.is_dir():
-                    pdflatex = subdir / 'pdflatex'
+                    pdflatex = subdir / "pdflatex"
                     if pdflatex.exists():
                         return str(pdflatex)
 
         # Fallback: check system PATH
         import shutil
-        system_pdflatex = shutil.which('pdflatex')
+
+        system_pdflatex = shutil.which("pdflatex")
         if system_pdflatex:
             return system_pdflatex
 
@@ -465,16 +491,17 @@ class FirstRunSetup:
             return False
 
         # Find the bin directory with pdflatex
-        bin_dir = self.tinytex_dir / 'bin'
+        bin_dir = self.tinytex_dir / "bin"
         latex_bin_dir = None
 
         import platform
+
         system = platform.system()
 
         for subdir in bin_dir.iterdir():
             if subdir.is_dir():
                 # Windows uses pdflatex.exe
-                pdflatex_name = 'pdflatex.exe' if system == "Windows" else 'pdflatex'
+                pdflatex_name = "pdflatex.exe" if system == "Windows" else "pdflatex"
                 pdflatex = subdir / pdflatex_name
                 if pdflatex.exists():
                     latex_bin_dir = str(subdir)
@@ -484,9 +511,9 @@ class FirstRunSetup:
             return False
 
         # Add to PATH if not already present
-        current_path = os.environ.get('PATH', '')
+        current_path = os.environ.get("PATH", "")
         if latex_bin_dir not in current_path:
-            os.environ['PATH'] = f"{latex_bin_dir}{os.pathsep}{current_path}"
+            os.environ["PATH"] = f"{latex_bin_dir}{os.pathsep}{current_path}"
             print(f"✅ Added TinyTeX to PATH: {latex_bin_dir}")
             return True
 
@@ -521,25 +548,25 @@ class FirstRunSetup:
             config_path = get_writable_config_path()
 
             # Read current config
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
 
             # Update gguf_path
-            if 'paths' not in config:
-                config['paths'] = {}
+            if "paths" not in config:
+                config["paths"] = {}
 
             # Convert to Path object and make relative if possible
             new_path = Path(new_model_path)
             try:
                 # Try to make it relative to project root
                 rel_path = new_path.relative_to(self.project_root)
-                config['paths']['gguf_path'] = f"./{rel_path.as_posix()}"
+                config["paths"]["gguf_path"] = f"./{rel_path.as_posix()}"
             except ValueError:
                 # If outside project root, use absolute path
-                config['paths']['gguf_path'] = str(new_path.as_posix())
+                config["paths"]["gguf_path"] = str(new_path.as_posix())
 
             # Write updated config
-            with open(config_path, 'w', encoding='utf-8') as f:
+            with open(config_path, "w", encoding="utf-8") as f:
                 json.dump(config, f, indent=4)
 
             # Update self.model_path to reflect the change
@@ -551,10 +578,13 @@ class FirstRunSetup:
         except Exception as e:
             print(f"❌ Failed to update config: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
-    def run_setup(self, model_url: Optional[str] = None, model_sha256: Optional[str] = None) -> bool:
+    def run_setup(
+        self, model_url: Optional[str] = None, model_sha256: Optional[str] = None
+    ) -> bool:
         """
         Run complete first-run setup process.
 
@@ -565,9 +595,9 @@ class FirstRunSetup:
         Returns:
             True if setup completed successfully
         """
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("  ASU SCORECARD GENERATOR - FIRST RUN SETUP")
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
 
         success = True
 
@@ -577,7 +607,9 @@ class FirstRunSetup:
                 print("\n📥 STEP 1: Downloading LLM Model")
                 print(f"This is a large file (~5GB) and may take 10-20 minutes.\n")
                 if not self.download_model(model_url, model_sha256):
-                    print("⚠️  Model download failed. You can add a model manually later.")
+                    print(
+                        "⚠️  Model download failed. You can add a model manually later."
+                    )
                     print(f"   Place your GGUF model file at: {self.model_path}")
                     success = False
             else:
@@ -590,7 +622,9 @@ class FirstRunSetup:
         # Step 2: TinyTeX installation
         if not self.tinytex_exists():
             print("\n📦 STEP 2: Installing TinyTeX")
-            print("This will download and install a minimal LaTeX distribution (~150MB).\n")
+            print(
+                "This will download and install a minimal LaTeX distribution (~150MB).\n"
+            )
             if not self.install_tinytex():
                 print("⚠️  TinyTeX installation failed.")
                 print("   You may need to install LaTeX manually for PDF generation.")
@@ -601,14 +635,14 @@ class FirstRunSetup:
         # Mark setup complete
         if success:
             self.mark_setup_complete()
-            print("\n" + "="*60)
+            print("\n" + "=" * 60)
             print("  ✅ SETUP COMPLETE!")
-            print("="*60)
+            print("=" * 60)
             print("\nThe application will now start normally.\n")
         else:
-            print("\n" + "="*60)
+            print("\n" + "=" * 60)
             print("  ⚠️  SETUP COMPLETED WITH WARNINGS")
-            print("="*60)
+            print("=" * 60)
             print("\nSome components may not work correctly.")
             print("Check the messages above for details.\n")
 
@@ -618,7 +652,7 @@ class FirstRunSetup:
 def check_and_run_setup(
     model_url: Optional[str] = None,
     model_sha256: Optional[str] = None,
-    config: Optional[dict] = None
+    config: Optional[dict] = None,
 ) -> bool:
     """
     Convenience function to check if setup is needed and run it.
@@ -639,3 +673,4 @@ def check_and_run_setup(
 
     # Run setup
     return setup.run_setup(model_url, model_sha256)
+

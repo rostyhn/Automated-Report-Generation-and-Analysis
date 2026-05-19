@@ -8,16 +8,16 @@ from src.utils import load_pdf_json, course_to_json_path, log_to_file
 from src.resource_utils import get_resource_path
 
 # Hardware/Computing Parameters
-N_CTX        = int(os.environ.get("N_CTX", 32768)) # Change this for laptops?
-N_THREADS    = int(os.environ.get("N_THREADS", max(1, (os.cpu_count() or 2) - 1)))
-N_GPU_LAYERS = int(os.environ.get("N_GPU_LAYERS", 0)) # All CPU for now?
+N_CTX = int(os.environ.get("N_CTX", 32768))  # Change this for laptops?
+N_THREADS = int(os.environ.get("N_THREADS", max(1, (os.cpu_count() or 2) - 1)))
+N_GPU_LAYERS = int(os.environ.get("N_GPU_LAYERS", 0))  # All CPU for now?
 
 # LLM Parameters
 MAX_TOKENS = min(int(os.environ.get("MAX_TOKENS", 4096)), 4096)
-TEMP       = float(os.environ.get("LLM_TEMP", "0.0"))
-TOP_P      = float(os.environ.get("TOP_P", 0.7))
+TEMP = float(os.environ.get("LLM_TEMP", "0.0"))
+TOP_P = float(os.environ.get("TOP_P", 0.7))
 REPEAT_PEN = float(os.environ.get("REPEAT_PEN", 1.0))
-MIN_P      = float(os.environ.get("MIN_P", 0.05))
+MIN_P = float(os.environ.get("MIN_P", 0.05))
 
 
 def _detect_gpu_capabilities(log_callback=None):
@@ -43,20 +43,21 @@ def _detect_gpu_capabilities(log_callback=None):
         "has_gpu": False,
         "gpu_type": "none",
         "vram_gb": 0.0,
-        "recommended_layers": 0
+        "recommended_layers": 0,
     }
 
     # Try NVIDIA GPU detection (CUDA)
     try:
         import subprocess
+
         result = subprocess.run(
             ["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
         )
         if result.returncode == 0:
-            vram_mb = float(result.stdout.strip().split('\n')[0])
+            vram_mb = float(result.stdout.strip().split("\n")[0])
             vram_gb = vram_mb / 1024
             gpu_info["has_gpu"] = True
             gpu_info["gpu_type"] = "nvidia"
@@ -71,7 +72,7 @@ def _detect_gpu_capabilities(log_callback=None):
             elif vram_gb >= 4:
                 gpu_info["recommended_layers"] = 16  # Limited offload
             else:
-                gpu_info["recommended_layers"] = 0   # Too little VRAM
+                gpu_info["recommended_layers"] = 0  # Too little VRAM
 
             log(f"  🎮 NVIDIA GPU detected: {vram_gb:.1f}GB VRAM")
             log(f"  💡 Recommended GPU layers: {gpu_info['recommended_layers']}")
@@ -82,15 +83,16 @@ def _detect_gpu_capabilities(log_callback=None):
     # Try AMD GPU detection (ROCm)
     try:
         import subprocess
+
         result = subprocess.run(
             ["rocm-smi", "--showmeminfo", "vram"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
         )
         if result.returncode == 0 and "Total" in result.stdout:
             # Parse ROCm output (format varies)
-            for line in result.stdout.split('\n'):
+            for line in result.stdout.split("\n"):
                 if "Total" in line and "MB" in line:
                     vram_mb = float(line.split()[1])
                     vram_gb = vram_mb / 1024
@@ -106,12 +108,8 @@ def _detect_gpu_capabilities(log_callback=None):
     # Try Intel GPU detection (Level Zero)
     try:
         import subprocess
-        result = subprocess.run(
-            ["sycl-ls"],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
+
+        result = subprocess.run(["sycl-ls"], capture_output=True, text=True, timeout=5)
         if result.returncode == 0 and "Intel" in result.stdout:
             gpu_info["has_gpu"] = True
             gpu_info["gpu_type"] = "intel"
@@ -139,12 +137,12 @@ def _configure_llama_cpu_compatibility():
     """
     # Disable advanced CPU instructions that may not be supported
     compatibility_flags = {
-        "LLAMA_NO_ACCELERATE": "1",      # Disable hardware acceleration fallbacks
-        "LLAMA_NO_AVX": "1",             # Disable AVX instructions
-        "LLAMA_NO_AVX2": "1",            # Disable AVX2 instructions
-        "LLAMA_NO_AVX512": "1",          # Disable AVX-512 instructions
-        "LLAMA_NO_FMA": "1",             # Disable FMA instructions
-        "LLAMA_NO_F16C": "1",            # Disable F16C instructions
+        "LLAMA_NO_ACCELERATE": "1",  # Disable hardware acceleration fallbacks
+        "LLAMA_NO_AVX": "1",  # Disable AVX instructions
+        "LLAMA_NO_AVX2": "1",  # Disable AVX2 instructions
+        "LLAMA_NO_AVX512": "1",  # Disable AVX-512 instructions
+        "LLAMA_NO_FMA": "1",  # Disable FMA instructions
+        "LLAMA_NO_F16C": "1",  # Disable F16C instructions
     }
 
     # Apply flags without overwriting user-set values
@@ -164,6 +162,7 @@ def _get_safe_llama_params(log_callback=None, gpu_info=None):
     Returns:
         dict: Safe initialization parameters for Llama()
     """
+
     def log(message):
         """Helper to log both to console and callback"""
         print(message)
@@ -173,10 +172,10 @@ def _get_safe_llama_params(log_callback=None, gpu_info=None):
 
     # Start with CPU-only defaults
     params = {
-        "n_gpu_layers": 0,           # CPU-only processing (may be overridden)
-        "use_mmap": True,            # Memory-map model file (reduces RAM pressure)
-        "use_mlock": False,          # Don't lock pages in RAM (compatibility)
-        "verbose": False,            # Suppress llama.cpp debug output
+        "n_gpu_layers": 0,  # CPU-only processing (may be overridden)
+        "use_mmap": True,  # Memory-map model file (reduces RAM pressure)
+        "use_mlock": False,  # Don't lock pages in RAM (compatibility)
+        "verbose": False,  # Suppress llama.cpp debug output
     }
 
     # Check if GPU offloading is possible and beneficial
@@ -187,7 +186,9 @@ def _get_safe_llama_params(log_callback=None, gpu_info=None):
         if user_gpu_layers == -1:
             # User hasn't set preference - use detected recommendation
             params["n_gpu_layers"] = gpu_info["recommended_layers"]
-            log(f"  🚀 GPU acceleration enabled: {gpu_info['recommended_layers']} layers offloaded")
+            log(
+                f"  🚀 GPU acceleration enabled: {gpu_info['recommended_layers']} layers offloaded"
+            )
         elif user_gpu_layers == 0:
             # User explicitly disabled GPU
             log(f"  ⚙️ GPU available but disabled via N_GPU_LAYERS=0")
@@ -203,7 +204,7 @@ def _get_safe_llama_params(log_callback=None, gpu_info=None):
 
     if system == "Windows":
         # Windows-specific safety measures
-        params["low_vram"] = True    # Enable low-VRAM mode for stability
+        params["low_vram"] = True  # Enable low-VRAM mode for stability
         log("  🪟 Windows detected: Applying conservative memory settings")
     elif system == "Linux":
         params["use_mlock"] = False
@@ -226,6 +227,7 @@ def _load_llm_model(gguf_path, log_callback=None):
     Returns:
         Llama: Loaded model instance, or None if all attempts fail
     """
+
     def log(message):
         """Helper to log both to console and callback"""
         print(message)
@@ -243,7 +245,9 @@ def _load_llm_model(gguf_path, log_callback=None):
 
     # Strategy 1: Optimal settings (GPU if available, otherwise conservative CPU)
     if gpu_info["has_gpu"] and gpu_info["recommended_layers"] > 0:
-        log(f"  🔧 Attempting to load model with GPU acceleration ({gpu_info['gpu_type'].upper()})...")
+        log(
+            f"  🔧 Attempting to load model with GPU acceleration ({gpu_info['gpu_type'].upper()})..."
+        )
     else:
         log("  🔧 Attempting to load model with conservative CPU settings...")
 
@@ -255,10 +259,12 @@ def _load_llm_model(gguf_path, log_callback=None):
             n_threads=N_THREADS,
             chat_format="llama-3",
             min_p=MIN_P,
-            **safe_params
+            **safe_params,
         )
         if gpu_info["has_gpu"] and safe_params["n_gpu_layers"] > 0:
-            log(f"  ✅ Model loaded successfully with GPU acceleration ({safe_params['n_gpu_layers']} layers)")
+            log(
+                f"  ✅ Model loaded successfully with GPU acceleration ({safe_params['n_gpu_layers']} layers)"
+            )
         else:
             log("  ✅ Model loaded successfully with CPU")
         return llm
@@ -284,7 +290,7 @@ def _load_llm_model(gguf_path, log_callback=None):
             n_threads=max(1, N_THREADS // 2),  # Use fewer threads
             chat_format="llama-3",
             min_p=MIN_P,
-            **safe_params
+            **safe_params,
         )
         log("  ⚠️ Model loaded with reduced context window (8K tokens, CPU only)")
         return llm
@@ -296,15 +302,17 @@ def _load_llm_model(gguf_path, log_callback=None):
     try:
         llm = Llama(
             model_path=gguf_path,
-            n_ctx=2048,              # Minimal context
-            n_threads=1,             # Single thread
+            n_ctx=2048,  # Minimal context
+            n_threads=1,  # Single thread
             n_gpu_layers=0,
-            use_mmap=False,          # Disable memory mapping
+            use_mmap=False,  # Disable memory mapping
             use_mlock=False,
             verbose=False,
-            chat_format="llama-3"
+            chat_format="llama-3",
         )
-        log("  ⚠️ Model loaded with ultra-minimal settings (2K context, single-threaded)")
+        log(
+            "  ⚠️ Model loaded with ultra-minimal settings (2K context, single-threaded)"
+        )
         return llm
     except Exception as e:
         log(f"  ⚠️ Ultra-minimal configuration failed: {e}")
@@ -312,10 +320,14 @@ def _load_llm_model(gguf_path, log_callback=None):
     # All strategies failed
     log("  ❌ All loading strategies failed")
     log("  💡 Possible solutions:")
-    log("     1. Reinstall llama-cpp-python: pip uninstall llama-cpp-python && pip install llama-cpp-python --no-cache-dir")
+    log(
+        "     1. Reinstall llama-cpp-python: pip uninstall llama-cpp-python && pip install llama-cpp-python --no-cache-dir"
+    )
     log("     2. Use prebuilt wheels: pip install llama-cpp-python --prefer-binary")
     log("     3. Build from source with CPU-specific flags:")
-    log("        CMAKE_ARGS=\"-DLLAMA_AVX2=OFF -DLLAMA_AVX=OFF\" pip install llama-cpp-python --force-reinstall")
+    log(
+        '        CMAKE_ARGS="-DLLAMA_AVX2=OFF -DLLAMA_AVX=OFF" pip install llama-cpp-python --force-reinstall'
+    )
     log("     4. Enable debug placeholder mode in config.json")
 
     return None
@@ -332,7 +344,7 @@ def load_system_prompt(llm_dir):
         System prompt string or None if not found
     """
     # Build relative path for get_resource_path
-    if llm_dir.startswith('./'):
+    if llm_dir.startswith("./"):
         llm_dir = llm_dir[2:]  # Remove leading './'
 
     system_prompt_path = get_resource_path(os.path.join(llm_dir, "system_prompt.txt"))
@@ -347,6 +359,7 @@ def load_system_prompt(llm_dir):
 
     return system_prompt
 
+
 def load_user_prompt(llm_dir, pdf_json):
     """
     Load user prompt from bundled resources and append evaluation data.
@@ -359,7 +372,7 @@ def load_user_prompt(llm_dir, pdf_json):
         User prompt string or None if not found
     """
     # Build relative path for get_resource_path
-    if llm_dir.startswith('./'):
+    if llm_dir.startswith("./"):
         llm_dir = llm_dir[2:]  # Remove leading './'
 
     user_prompt_path = get_resource_path(os.path.join(llm_dir, "user_prompt.txt"))
@@ -371,24 +384,24 @@ def load_user_prompt(llm_dir, pdf_json):
     except FileNotFoundError:
         print(f"Missing user prompt at {user_prompt_path}", file=sys.stderr)
         return None
-    
+
     user_prompt += "\n\nFREE RESPONSE COMMENTS\n"
 
-    # Likes 
+    # Likes
     user_prompt += "\nWhat students liked:"
-    liked_comments = pdf_json.get('free_response', {}).get('liked', {})
+    liked_comments = pdf_json.get("free_response", {}).get("liked", {})
     for comment in liked_comments:
         user_prompt += f"\n- {comment}"
 
-    # Dislikes 
+    # Dislikes
     user_prompt += "\n\nWhat students disliked:"
-    disliked_comments = pdf_json.get('free_response', {}).get('disliked', {})
+    disliked_comments = pdf_json.get("free_response", {}).get("disliked", {})
     for comment in disliked_comments:
         user_prompt += f"\n- {comment}"
 
     # Comments
     user_prompt += "\nComments"
-    comments_dict = pdf_json.get('free_response', {}).get('comments', {})
+    comments_dict = pdf_json.get("free_response", {}).get("comments", {})
     for comment in comments_dict:
         user_prompt += f"\n{comment}"
 
@@ -396,12 +409,14 @@ def load_user_prompt(llm_dir, pdf_json):
 
 
 def run_llm(
-        gguf_path,
-        selected_scorecard_courses: pd.DataFrame,
-        llm_dir,
-        config=None,
-        log_callback=None
+    gguf_path,
+    selected_scorecard_courses: pd.DataFrame,
+    llm_dir,
+    config=None,
+    log_callback=None,
 ):
+    print("In run_llm")
+    print(selected_scorecard_courses)  # this is empty?
     """
     Spins up the LLM & generates an LLM summary for each viable `scorecard_set`
 
@@ -423,15 +438,27 @@ def run_llm(
     debug_replace_llm_with_placeholder = False
     overwrite_llm_summary = True
     if config is not None:
-        debug_replace_llm_with_placeholder = str(
-            config.get("scorecard_gen_settings", {}).get("debug_replace_LLM_with_placeholder", "false")
-        ).lower() == "true"
-        overwrite_llm_summary = str(
-            config.get("overwrite_settings", {}).get("overwrite_llm_summary", "true")
-        ).lower() == "true"
+        debug_replace_llm_with_placeholder = (
+            str(
+                config.get("scorecard_gen_settings", {}).get(
+                    "debug_replace_LLM_with_placeholder", "false"
+                )
+            ).lower()
+            == "true"
+        )
+        overwrite_llm_summary = (
+            str(
+                config.get("overwrite_settings", {}).get(
+                    "overwrite_llm_summary", "true"
+                )
+            ).lower()
+            == "true"
+        )
 
     if debug_replace_llm_with_placeholder:
-        log("  ⚠️ Placeholders enabled for LLM generation! debug_replace_LLM_with_placeholder is enabled in config!")
+        log(
+            "  ⚠️ Placeholders enabled for LLM generation! debug_replace_LLM_with_placeholder is enabled in config!"
+        )
 
         placeholder_text = (
             "Positive Feedback: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc sit amet tempor lacus, sagittis varius elit. Cras dictum tellus in nulla interdum, et congue diam iaculis. Proin in bibendum dui. Mauris sit amet sagittis sapien, et volutpat urna. Nulla in nisi ac urna commodo.\n\n\\par\n"
@@ -439,7 +466,7 @@ def run_llm(
             "Overall Tone: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc sit amet tempor lacus, sagittis varius elit. Cras dictum tellus in nulla interdum, et congue diam iaculis. Proin in bibendum dui. Mauris sit amet sagittis sapien, et volutpat urna. Nulla in nisi ac urna commodo."
         )
         for _, course in selected_scorecard_courses.iterrows():
-            pdf_json_path = course_to_json_path(course=course,config=config)
+            pdf_json_path = course_to_json_path(course=course, config=config)
             pdf_json = load_pdf_json(pdf_json_path)
 
             existing = pdf_json.get("llm_summary") if pdf_json else None
@@ -476,7 +503,10 @@ def run_llm(
     if llm is None:
         log("❌ Failed to load language model after all fallback attempts")
         return
-    
+
+    # TODO: this is where it should be doing something
+
+    # this is only done for courses?
     total_courses = len(selected_scorecard_courses)
     for idx, (_, course) in enumerate(selected_scorecard_courses.iterrows(), 1):
         pdf_json_path = course_to_json_path(course)
@@ -500,7 +530,7 @@ def run_llm(
         # Messages for the LLM
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": user_prompt},
+            {"role": "user", "content": user_prompt},
         ]
         try:
             stream = llm.create_chat_completion(
@@ -523,10 +553,10 @@ def run_llm(
                     # Still print to console for debugging
                     print(text, end="", flush=True)
 
-            print() # print a line after streaming
+            print()  # print a line after streaming
 
             llm_response = "".join(full_response_text)
-            pdf_json['llm_summary'] = llm_response
+            pdf_json["llm_summary"] = llm_response
             log(f"  ✅ LLM response completed for {course_name}")
 
             # Write the complete, .json to the temporary directory
